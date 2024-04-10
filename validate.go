@@ -73,6 +73,15 @@ func checkList(typeOf reflect.Type, valueOf reflect.Value, data map[string]any, 
 			value.SetInt(toInt(v))
 		case reflect.Float64:
 			value.SetFloat(toFloat(v))
+		case reflect.String:
+			value.SetString(toString(v))
+		case reflect.Slice:
+			switch field.Type.Elem().String() {
+			case "string":
+				value.Set(reflect.ValueOf(toSliceString(v)))
+			case "int":
+				value.Set(reflect.ValueOf(toSliceInt(v)))
+			}
 		default:
 			continue
 		}
@@ -111,6 +120,11 @@ func validator(data map[string]any, path []string, name string, rules []Rule, re
 			errList = append(errList, Error{
 				Attribute: name,
 				Name:      "numeric",
+			})
+		} else if rule.Name == "string" && reflect.TypeOf(value).Kind() != reflect.String {
+			errList = append(errList, Error{
+				Attribute: name,
+				Name:      "string",
 			})
 		}
 	}
@@ -190,4 +204,47 @@ func toFloat(value any) float64 {
 	}
 
 	return 0.0
+}
+
+func toString(value any) string {
+	switch value.(type) {
+	case int:
+		return strconv.Itoa(value.(int))
+	case float64:
+		return strconv.FormatFloat(value.(float64), 'g', -1, 64)
+	case string:
+		return value.(string)
+	}
+
+	return ""
+}
+
+func toSliceString(value any) []string {
+	r := make([]string, 0)
+
+	for _, v := range value.([]interface{}) {
+		switch v.(type) {
+		case string:
+			r = append(r, v.(string))
+		default:
+			return r
+		}
+	}
+
+	return r
+}
+
+func toSliceInt(value any) []int {
+	r := make([]int, 0)
+
+	for _, v := range value.([]interface{}) {
+		switch v.(type) {
+		case float64:
+			r = append(r, int(v.(float64)))
+		default:
+			return r
+		}
+	}
+
+	return r
 }
