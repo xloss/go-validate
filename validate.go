@@ -222,6 +222,10 @@ func toString(value any) string {
 func toSliceString(value any) []string {
 	r := make([]string, 0)
 
+	if value == nil {
+		return r
+	}
+
 	for _, v := range value.([]interface{}) {
 		switch v.(type) {
 		case string:
@@ -236,6 +240,10 @@ func toSliceString(value any) []string {
 
 func toSliceInt(value any) []int {
 	r := make([]int, 0)
+
+	if value == nil {
+		return r
+	}
 
 	for _, v := range value.([]interface{}) {
 		switch v.(type) {
