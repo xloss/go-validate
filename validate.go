@@ -75,6 +75,8 @@ func checkList(typeOf reflect.Type, valueOf reflect.Value, data map[string]any, 
 			value.SetFloat(toFloat(v))
 		case reflect.String:
 			value.SetString(toString(v))
+		case reflect.Bool:
+			value.SetBool(toBool(v))
 		case reflect.Slice:
 			switch field.Type.Elem().String() {
 			case "string":
@@ -217,6 +219,15 @@ func toString(value any) string {
 	}
 
 	return ""
+}
+
+func toBool(value any) bool {
+	switch value.(type) {
+	case bool:
+		return value.(bool)
+	}
+
+	return false
 }
 
 func toSliceString(value any) []string {
