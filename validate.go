@@ -256,6 +256,12 @@ func toSliceInt(value any) []int {
 		return r
 	}
 
+	switch value.(type) {
+	case []interface{}:
+	default:
+		return r
+	}
+
 	for _, v := range value.([]interface{}) {
 		switch v.(type) {
 		case float64:
