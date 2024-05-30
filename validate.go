@@ -78,12 +78,25 @@ func checkList(typeOf reflect.Type, valueOf reflect.Value, data map[string]any, 
 		case reflect.Bool:
 			value.SetBool(toBool(v))
 		case reflect.Slice:
-			switch field.Type.Elem().String() {
-			case "string":
+			switch field.Type.Elem().Kind() {
+			case reflect.String:
 				value.Set(reflect.ValueOf(toSliceString(v)))
-			case "int":
+			case reflect.Int:
 				value.Set(reflect.ValueOf(toSliceInt(v)))
+			case reflect.Struct:
+				s, errStruct := toSliceStruct(value.Type(), v)
+				if len(errStruct) > 0 {
+					for _, err := range errStruct {
+						err.Attribute = jsonName + "." + err.Attribute
+						errList = append(errList, err)
+					}
+					continue
+				}
+				value.Set(s)
+			default:
+				continue
 			}
+
 		default:
 			continue
 		}
@@ -272,4 +285,22 @@ func toSliceInt(value any) []int {
 	}
 
 	return r
+}
+
+func toSliceStruct(t reflect.Type, value any) (reflect.Value, []Error) {
+	errList := make([]Error, 0)
+	values := value.([]interface{})
+	s := reflect.MakeSlice(t, len(values), len(values))
+
+	for i, v := range values {
+		errs := checkList(s.Index(i).Type(), s.Index(i), v.(map[string]any), []string{})
+		if errs != nil {
+			for _, err := range errs {
+				err.Attribute = strconv.Itoa(i) + "." + err.Attribute
+				errList = append(errList, err)
+			}
+		}
+	}
+
+	return s, errList
 }
