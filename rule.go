@@ -1,18 +1,26 @@
 package go_validate
 
-import "strings"
+import "github.com/xloss/go-validate/rules"
 
-type Rule struct {
-	Name   string
-	Params []string
+type Rule interface {
+	GetName() string
+	GetValues() map[string]any
+	Validate(value any) bool
 }
 
-func (rule *Rule) Setup(text string) {
-	ruleData := strings.SplitN(text, ":", 2)
-
-	rule.Name = strings.ToLower(ruleData[0])
-
-	if len(ruleData) > 1 {
-		rule.Params = strings.Split(ruleData[1], ",")
+func nameToRule(name string) Rule {
+	switch name {
+	case "required":
+		return rules.Required{}
+	case "string":
+		return rules.String{}
+	case "integer":
+		return rules.Integer{}
+	case "numeric":
+		return rules.Numeric{}
+	case "boolean":
+		return rules.Boolean{}
 	}
+
+	return nil
 }
