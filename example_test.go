@@ -24,11 +24,11 @@ func TestRun(t *testing.T) {
 	}
 
 	fieldRules := map[string][]any{
-		"integer_value":  {rules.Integer{}},
+		"integer_value":  {&rules.Integer{}},
 		"string_value":   {"string"},
-		"numeric_value":  {rules.Numeric{}},
+		"numeric_value":  {&rules.Numeric{}},
 		"boolean_value":  {"boolean"},
-		"required_value": {rules.Required{}, rules.String{}},
+		"required_value": {&rules.Required{}, &rules.String{}},
 	}
 
 	r, errors := Run[apiRequest](data, fieldRules)

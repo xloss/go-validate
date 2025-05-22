@@ -1,6 +1,9 @@
 package go_validate
 
-import "github.com/xloss/go-validate/rules"
+import (
+	"github.com/xloss/go-validate/rules"
+	"strings"
+)
 
 type Rule interface {
 	GetName() string
@@ -8,18 +11,39 @@ type Rule interface {
 	Validate(value any) bool
 }
 
-func nameToRule(name string) Rule {
-	switch name {
+func nameToRule(rule string) Rule {
+	params := strings.Split(rule, ":")
+
+	switch params[0] {
 	case "required":
-		return rules.Required{}
+		return &rules.Required{}
 	case "string":
-		return rules.String{}
+		return &rules.String{}
 	case "integer":
-		return rules.Integer{}
+		return &rules.Integer{}
 	case "numeric":
-		return rules.Numeric{}
+		return &rules.Numeric{}
 	case "boolean":
-		return rules.Boolean{}
+		return &rules.Boolean{}
+	case "min":
+		if len(params) != 2 {
+			errRule := &rules.Error{}
+			errRule.AddParams(rule)
+
+			return errRule
+		}
+
+		r := rules.Min{}
+		err := r.AddParams(params[1])
+		if err != nil {
+			errRule := &rules.Error{}
+			errRule.AddParams(rule)
+			errRule.AddError(err)
+
+			return errRule
+		}
+
+		return &r
 	}
 
 	return nil

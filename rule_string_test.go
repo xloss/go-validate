@@ -19,13 +19,28 @@ func TestRuleString(t *testing.T) {
 	_ = json.Unmarshal([]byte(r1text), &data)
 
 	_, errors := Run[testRequest](data, map[string][]any{
-		"string1":     {rules.String{}},
+		"string1":     {&rules.String{}},
 		"string2":     {"string"},
-		"invalidate1": {rules.String{}},
+		"invalidate1": {&rules.String{}},
 		"invalidate2": {"string"},
 	})
 
 	if len(errors) != 2 {
-		t.Errorf("expected 1 validation error, got %v", errors)
+		t.Errorf("expected 2 validation error, got %v", errors)
+	}
+
+	for _, err := range errors {
+		switch err.Attribute {
+		case "invalidate1":
+			if err.Name != "string" {
+				t.Errorf("Errors invalidate1.Name should be string")
+			}
+		case "invalidate2":
+			if err.Name != "string" {
+				t.Errorf("Errors invalidate2.Name should be string")
+			}
+		default:
+			t.Errorf("Errors should be 2")
+		}
 	}
 }

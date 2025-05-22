@@ -4,15 +4,15 @@ type Integer struct {
 	name string
 }
 
-func (r Integer) GetName() string {
+func (r *Integer) GetName() string {
 	return r.name
 }
 
-func (r Integer) GetValues() map[string]any {
+func (r *Integer) GetValues() map[string]any {
 	return map[string]any{}
 }
 
-func (r Integer) Validate(value any) bool {
+func (r *Integer) Validate(value any) bool {
 	r.name = "integer"
 
 	if value == nil {

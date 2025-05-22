@@ -19,13 +19,28 @@ func TestRuleBoolean(t *testing.T) {
 	_ = json.Unmarshal([]byte(r1text), &data)
 
 	_, errors := Run[testRequest](data, map[string][]any{
-		"boolean1":    {rules.Boolean{}},
+		"boolean1":    {&rules.Boolean{}},
 		"boolean2":    {"boolean"},
-		"invalidate1": {rules.Boolean{}},
+		"invalidate1": {&rules.Boolean{}},
 		"invalidate2": {"boolean"},
 	})
 
 	if len(errors) != 2 {
 		t.Errorf("expected 1 validation error, got %v", errors)
+	}
+
+	for _, err := range errors {
+		switch err.Attribute {
+		case "invalidate1":
+			if err.Name != "boolean" {
+				t.Errorf("Errors invalidate1.Name should be boolean")
+			}
+		case "invalidate2":
+			if err.Name != "boolean" {
+				t.Errorf("Errors invalidate2.Name should be boolean")
+			}
+		default:
+			t.Errorf("Errors should be 2")
+		}
 	}
 }
