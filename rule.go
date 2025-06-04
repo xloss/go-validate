@@ -44,6 +44,8 @@ func nameToRule(rule string) Rule {
 		}
 
 		return &r
+	case "domain":
+		return &rules.Domain{}
 	}
 
 	return nil
