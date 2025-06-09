@@ -46,6 +46,8 @@ func nameToRule(rule string) Rule {
 		return &r
 	case "domain":
 		return &rules.Domain{}
+	case "date":
+		return &rules.Date{}
 	}
 
 	return nil

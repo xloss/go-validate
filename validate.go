@@ -3,6 +3,7 @@ package go_validate
 import (
 	"reflect"
 	"strconv"
+	"time"
 )
 
 func Run[T interface{}](data map[string]any, fieldRules map[string][]any) (*T, []Error) {
@@ -73,19 +74,34 @@ func setValue(typ reflect.Type, data any, value reflect.Value, field string, err
 			return false
 		}
 	case reflect.Struct:
-		if s, ok := data.(map[string]any); ok {
-			structValue(typ, value, s, field, errors)
+		if typ.String() == "time.Time" {
+			t, err := time.Parse(time.RFC3339Nano, data.(string))
+			if err != nil {
+				*errors = append(*errors, Error{
+					Attribute: field,
+					Name:      "format",
+					Values: map[string]any{
+						"name":    typ.String(),
+						"reflect": typ.Kind().String(),
+					},
+				})
+			}
+			value.Set(reflect.ValueOf(t))
 		} else {
-			*errors = append(*errors, Error{
-				Attribute: field,
-				Name:      "format",
-				Values: map[string]any{
-					"name":    typ.String(),
-					"reflect": typ.Kind().String(),
-				},
-			})
+			if s, ok := data.(map[string]any); ok {
+				structValue(typ, value, s, field, errors)
+			} else {
+				*errors = append(*errors, Error{
+					Attribute: field,
+					Name:      "format",
+					Values: map[string]any{
+						"name":    typ.String(),
+						"reflect": typ.Kind().String(),
+					},
+				})
 
-			return false
+				return false
+			}
 		}
 	case reflect.Slice:
 		sliceValue(typ, data, value, field, errors)

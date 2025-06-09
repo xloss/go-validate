@@ -44,6 +44,7 @@ if len(errors) != 0 {
 | &rules.Boolean  | boolean       | Boolean type                                                 | Name: "boolean"                                                                       |
 | &rules.Min      | min:value     | Minimum value check for string size, number, or array length | Name: "min.numeric", "min.string", "min.array", Values["min"]: minimum required value |
 | &rules.Domain   | domain        | Validation for a valid domain name                           | Name: "domain"                                                                        |
+| &rules.Date     | date          | Date Validation in RFC3339 format                            | Name: "date"                                                                          |
 
 ## Description
 
