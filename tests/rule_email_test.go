@@ -8,7 +8,7 @@ import (
 	"github.com/xloss/go-validate/rules"
 )
 
-func TestEmailDomain(t *testing.T) {
+func TestRuleEmail(t *testing.T) {
 	type testRequest struct {
 		Mail1 string `json:"mail1"`
 		Mail2 string `json:"mail2"`

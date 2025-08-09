@@ -53,6 +53,8 @@ func nameToRule(rule string) Rule {
 		return &rules.Email{}
 	case "confirmed":
 		return &rules.Confirmed{}
+	case "accepted":
+		return &rules.Accepted{}
 	}
 
 	return nil

@@ -47,6 +47,7 @@ if len(errors) != 0 {
 | &rules.Date      | date          | Date Validation in RFC3339 format                                              | Name: "date"                                                                          |
 | &rules.Email     | email         | Email Validation  in RFC5322 format                                            | Name: "email"                                                                         |
 | &rules.Confirmed | confirmed     | The field under validation must have a matching field of {field}_confirmation. | Name: "confirmed"                                                                     |
+| &rules.Accepted  | accepted      | The field under validation must be "yes", "on", 1, "1", true, or "true".       | Name: "accepted"                                                                      |
 
 ## Description
 
