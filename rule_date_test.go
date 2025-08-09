@@ -2,9 +2,10 @@ package go_validate
 
 import (
 	"encoding/json"
-	"github.com/xloss/go-validate/rules"
 	"testing"
 	"time"
+
+	"github.com/xloss/go-validate/rules"
 )
 
 func TestRuleDate(t *testing.T) {

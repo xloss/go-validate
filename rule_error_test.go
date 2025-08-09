@@ -2,8 +2,9 @@ package go_validate
 
 import (
 	"fmt"
-	"github.com/xloss/go-validate/rules"
 	"testing"
+
+	"github.com/xloss/go-validate/rules"
 )
 
 func TestRuleError(t *testing.T) {

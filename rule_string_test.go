@@ -2,8 +2,9 @@ package go_validate
 
 import (
 	"encoding/json"
-	"github.com/xloss/go-validate/rules"
 	"testing"
+
+	"github.com/xloss/go-validate/rules"
 )
 
 func TestRuleString(t *testing.T) {

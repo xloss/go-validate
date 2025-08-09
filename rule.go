@@ -1,8 +1,9 @@
 package go_validate
 
 import (
-	"github.com/xloss/go-validate/rules"
 	"strings"
+
+	"github.com/xloss/go-validate/rules"
 )
 
 type Rule interface {
@@ -48,6 +49,8 @@ func nameToRule(rule string) Rule {
 		return &rules.Domain{}
 	case "date":
 		return &rules.Date{}
+	case "email":
+		return &rules.Email{}
 	}
 
 	return nil

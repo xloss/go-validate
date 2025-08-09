@@ -1,8 +1,9 @@
 package rules
 
 import (
-	"golang.org/x/net/idna"
 	"strings"
+
+	"golang.org/x/net/idna"
 )
 
 type Domain struct {
