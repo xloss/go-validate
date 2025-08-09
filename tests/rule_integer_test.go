@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	govalidate "github.com/xloss/go-validate"
 	"github.com/xloss/go-validate/rules"
 )
 
@@ -19,7 +20,7 @@ func TestRuleInteger(t *testing.T) {
 	r1text := `{"integer1": null, "integer2": 1, "invalidate1": "1", "invalidate2": 2.5}`
 	_ = json.Unmarshal([]byte(r1text), &data)
 
-	_, errors := Run[testRequest](data, map[string][]any{
+	_, errors := govalidate.Run[testRequest](data, map[string][]any{
 		"integer1":    {&rules.Integer{}},
 		"integer2":    {"integer"},
 		"invalidate1": {&rules.Integer{}},
@@ -45,7 +46,7 @@ func TestRuleInteger(t *testing.T) {
 		}
 	}
 
-	_, errors = Run[testRequest](map[string]any{
+	_, errors = govalidate.Run[testRequest](map[string]any{
 		"integer1": int8(5),
 		"integer2": 5.6,
 	}, map[string][]any{

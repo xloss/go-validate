@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	govalidate "github.com/xloss/go-validate"
 	"github.com/xloss/go-validate/rules"
 )
 
@@ -19,7 +20,7 @@ func TestRuleBoolean(t *testing.T) {
 	r1text := `{"boolean1": null, "boolean2": true, "invalidate1": "1", "invalidate2": 1.5}`
 	_ = json.Unmarshal([]byte(r1text), &data)
 
-	_, errors := Run[testRequest](data, map[string][]any{
+	_, errors := govalidate.Run[testRequest](data, map[string][]any{
 		"boolean1":    {&rules.Boolean{}},
 		"boolean2":    {"boolean"},
 		"invalidate1": {&rules.Boolean{}},

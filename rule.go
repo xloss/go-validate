@@ -9,7 +9,7 @@ import (
 type Rule interface {
 	GetName() string
 	GetValues() map[string]any
-	Validate(value any) bool
+	Validate(field string, value any, data map[string]any) bool
 }
 
 func nameToRule(rule string) Rule {
@@ -51,6 +51,8 @@ func nameToRule(rule string) Rule {
 		return &rules.Date{}
 	case "email":
 		return &rules.Email{}
+	case "confirmed":
+		return &rules.Confirmed{}
 	}
 
 	return nil

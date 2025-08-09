@@ -29,6 +29,6 @@ func (r *Error) AddError(err error) {
 	r.values["error"] = err
 }
 
-func (r *Error) Validate(_ any) bool {
+func (r *Error) Validate(_ string, _ any, _ map[string]any) bool {
 	return false
 }

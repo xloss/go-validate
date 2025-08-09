@@ -30,7 +30,7 @@ func (r *Min) AddParams(params string) error {
 	return nil
 }
 
-func (r *Min) Validate(value any) bool {
+func (r *Min) Validate(_ string, value any, _ map[string]any) bool {
 	r.name = "min.numeric"
 	r.values = map[string]any{
 		"min": r.Min,

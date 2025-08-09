@@ -15,7 +15,7 @@ func (r *Date) GetValues() map[string]any {
 	return r.values
 }
 
-func (r *Date) Validate(value any) bool {
+func (r *Date) Validate(_ string, value any, _ map[string]any) bool {
 	r.name = "date"
 
 	if value == nil {

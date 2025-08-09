@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	govalidate "github.com/xloss/go-validate"
 	"github.com/xloss/go-validate/rules"
 )
 
@@ -18,7 +19,7 @@ func TestEmailDomain(t *testing.T) {
 	r1text := `{"mail1": "mail@localhost", "mail2": "mail@example.com", "mail3": "name@example.com"}`
 	_ = json.Unmarshal([]byte(r1text), &data)
 
-	r, errors := Run[testRequest](data, map[string][]any{
+	r, errors := govalidate.Run[testRequest](data, map[string][]any{
 		"mail1": {&rules.Email{}},
 		"mail2": {&rules.Email{}},
 		"mail3": {"email"},
@@ -41,7 +42,7 @@ func TestEmailDomain(t *testing.T) {
 	r2text := `{"mail1": "localhost", "mail2": "example.com", "mail3": "mail@example.com"}`
 	_ = json.Unmarshal([]byte(r2text), &data)
 
-	r, errors = Run[testRequest](data, map[string][]any{
+	r, errors = govalidate.Run[testRequest](data, map[string][]any{
 		"mail1": {&rules.Email{}},
 		"mail2": {&rules.Email{}},
 		"mail3": {&rules.Email{}},

@@ -12,7 +12,7 @@ func (r *Numeric) GetValues() map[string]any {
 	return map[string]any{}
 }
 
-func (r *Numeric) Validate(value any) bool {
+func (r *Numeric) Validate(_ string, value any, _ map[string]any) bool {
 	r.name = "numeric"
 
 	if value == nil {

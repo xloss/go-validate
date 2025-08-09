@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	govalidate "github.com/xloss/go-validate"
 	"github.com/xloss/go-validate/rules"
 )
 
@@ -21,7 +22,7 @@ func TestRuleMin(t *testing.T) {
 	r1text := `{"min_int": 5, "min_str": "str", "min_float": 5.0, "min_array": [1,2,3,4,5], "min_uint8": 2, "min_map": {"a": 1}}`
 	_ = json.Unmarshal([]byte(r1text), &data)
 
-	r, errors := Run[testRequest](data, map[string][]any{
+	r, errors := govalidate.Run[testRequest](data, map[string][]any{
 		"min_int":   {&rules.Min{Min: 2}},
 		"min_str":   {&rules.Min{Min: 2}},
 		"min_float": {&rules.Min{Min: 2}},
@@ -50,7 +51,7 @@ func TestRuleMin(t *testing.T) {
 		t.Errorf("MinUInt8 should be 2")
 	}
 
-	_, errors = Run[testRequest](data, map[string][]any{
+	_, errors = govalidate.Run[testRequest](data, map[string][]any{
 		"min_int":   {&rules.Min{Min: 6}},
 		"min_str":   {&rules.Min{Min: 4}},
 		"min_float": {&rules.Min{Min: 7}},
@@ -104,7 +105,7 @@ func TestRuleMin(t *testing.T) {
 		}
 	}
 
-	r, errors = Run[testRequest](data, map[string][]any{
+	r, errors = govalidate.Run[testRequest](data, map[string][]any{
 		"min_int": {"min:2"},
 	})
 
@@ -116,7 +117,7 @@ func TestRuleMin(t *testing.T) {
 		t.Errorf("MinInt should be 5")
 	}
 
-	_, errors = Run[testRequest](data, map[string][]any{
+	_, errors = govalidate.Run[testRequest](data, map[string][]any{
 		"min_int":   {"min:10"},
 		"min_str":   {"min"},
 		"min_float": {"min:2,1"},

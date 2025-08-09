@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	govalidate "github.com/xloss/go-validate"
 	"github.com/xloss/go-validate/rules"
 )
 
@@ -19,7 +20,7 @@ func TestRuleError(t *testing.T) {
 	errRule.AddParams("param:1")
 	errRule.AddError(fmt.Errorf("error"))
 
-	_, errs := Run[testRequest](data, map[string][]any{
+	_, errs := govalidate.Run[testRequest](data, map[string][]any{
 		"field": {errRule},
 	})
 

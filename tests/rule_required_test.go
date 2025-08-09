@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	govalidate "github.com/xloss/go-validate"
 	"github.com/xloss/go-validate/rules"
 )
 
@@ -17,7 +18,7 @@ func TestRuleRequired(t *testing.T) {
 	r1text := `{"string_val": null, "string_ptr": "str2"}`
 	_ = json.Unmarshal([]byte(r1text), &data)
 
-	_, errors := Run[testRequest](data, map[string][]any{
+	_, errors := govalidate.Run[testRequest](data, map[string][]any{
 		"string_val":  {&rules.Required{}},
 		"string_val2": {"required"},
 	})

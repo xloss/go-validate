@@ -12,7 +12,7 @@ func (r *Integer) GetValues() map[string]any {
 	return map[string]any{}
 }
 
-func (r *Integer) Validate(value any) bool {
+func (r *Integer) Validate(_ string, value any, _ map[string]any) bool {
 	r.name = "integer"
 
 	if value == nil {

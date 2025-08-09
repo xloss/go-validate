@@ -12,7 +12,7 @@ func (r *Boolean) GetValues() map[string]any {
 	return map[string]any{}
 }
 
-func (r *Boolean) Validate(value any) bool {
+func (r *Boolean) Validate(_ string, value any, _ map[string]any) bool {
 	r.name = "boolean"
 
 	if value == nil {

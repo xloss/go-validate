@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	govalidate "github.com/xloss/go-validate"
 	"github.com/xloss/go-validate/rules"
 )
 
@@ -23,7 +24,7 @@ func TestRuleDomain(t *testing.T) {
 	r1text := `{"host1": "localhost", "host2": "example.com", "host3": "пример.испытание", "host4": "مثال.إختبار", "host5": "例子.测试", "host6": "παράδειγμα.δοκιμή", "host7": "उदाहरण.परीक्षा", "host8": "例え.テスト"}`
 	_ = json.Unmarshal([]byte(r1text), &data)
 
-	r, errors := Run[testRequest](data, map[string][]any{
+	r, errors := govalidate.Run[testRequest](data, map[string][]any{
 		"host1": {&rules.Domain{}},
 		"host2": {&rules.Domain{}},
 		"host3": {&rules.Domain{}},
@@ -66,7 +67,7 @@ func TestRuleDomain(t *testing.T) {
 	r2text := `{"host1": ".localhost", "host2": "example.com.", "host3": "examp|e.com", "host4": "-example.com"}`
 	_ = json.Unmarshal([]byte(r2text), &data)
 
-	r, errors = Run[testRequest](data, map[string][]any{
+	r, errors = govalidate.Run[testRequest](data, map[string][]any{
 		"host1": {&rules.Domain{}},
 		"host2": {&rules.Domain{}},
 		"host3": {&rules.Domain{}},

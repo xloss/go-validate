@@ -5,8 +5,7 @@ import (
 )
 
 type Email struct {
-	name   string
-	values map[string]any
+	name string
 }
 
 func (r *Email) GetName() string {
@@ -14,10 +13,10 @@ func (r *Email) GetName() string {
 }
 
 func (r *Email) GetValues() map[string]any {
-	return r.values
+	return map[string]any{}
 }
 
-func (r *Email) Validate(value any) bool {
+func (r *Email) Validate(_ string, value any, _ map[string]any) bool {
 	r.name = "email"
 
 	if value == nil {

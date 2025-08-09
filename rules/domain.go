@@ -7,8 +7,7 @@ import (
 )
 
 type Domain struct {
-	name   string
-	values map[string]any
+	name string
 }
 
 func (r *Domain) GetName() string {
@@ -16,10 +15,10 @@ func (r *Domain) GetName() string {
 }
 
 func (r *Domain) GetValues() map[string]any {
-	return r.values
+	return map[string]any{}
 }
 
-func (r *Domain) Validate(value any) bool {
+func (r *Domain) Validate(_ string, value any, _ map[string]any) bool {
 	r.name = "domain"
 
 	if value == nil {

@@ -35,17 +35,18 @@ if len(errors) != 0 {
 
 ## Available Validations
 
-| Rule            | Rule (string) | Description                                                  | Error Structure                                                                       |
-|-----------------|---------------|--------------------------------------------------------------|---------------------------------------------------------------------------------------|
-| &rules.Required | required      | Required field                                               | Name: "required"                                                                      |         
-| &rules.Integer  | integer       | Integer                                                      | Name: "integer"                                                                       |
-| &rules.Numeric  | numeric       | Floating-point number                                        | Name: "numeric"                                                                       |
-| &rules.String   | string        | String                                                       | Name: "string"                                                                        |
-| &rules.Boolean  | boolean       | Boolean type                                                 | Name: "boolean"                                                                       |
-| &rules.Min      | min:value     | Minimum value check for string size, number, or array length | Name: "min.numeric", "min.string", "min.array", Values["min"]: minimum required value |
-| &rules.Domain   | domain        | Validation for a valid domain name                           | Name: "domain"                                                                        |
-| &rules.Date     | date          | Date Validation in RFC3339 format                            | Name: "date"                                                                          |
-| &rules.Email    | email         | Email Validation  in RFC 5322 format                         | Name: "email"                                                                         |
+| Rule             | Rule (string) | Description                                                                    | Error Structure                                                                       |
+|------------------|---------------|--------------------------------------------------------------------------------|---------------------------------------------------------------------------------------|
+| &rules.Required  | required      | Required field                                                                 | Name: "required"                                                                      |         
+| &rules.Integer   | integer       | Integer                                                                        | Name: "integer"                                                                       |
+| &rules.Numeric   | numeric       | Floating-point number                                                          | Name: "numeric"                                                                       |
+| &rules.String    | string        | String                                                                         | Name: "string"                                                                        |
+| &rules.Boolean   | boolean       | Boolean type                                                                   | Name: "boolean"                                                                       |
+| &rules.Min       | min:value     | Minimum value check for string size, number, or array length                   | Name: "min.numeric", "min.string", "min.array", Values["min"]: minimum required value |
+| &rules.Domain    | domain        | Validation for a valid domain name                                             | Name: "domain"                                                                        |
+| &rules.Date      | date          | Date Validation in RFC3339 format                                              | Name: "date"                                                                          |
+| &rules.Email     | email         | Email Validation  in RFC5322 format                                            | Name: "email"                                                                         |
+| &rules.Confirmed | confirmed     | The field under validation must have a matching field of {field}_confirmation. | Name: "confirmed"                                                                     |
 
 ## Description
 
@@ -67,6 +68,6 @@ type Error struct {
 type Rule interface {
     GetName() string // Returns the field name for Error.Name
     GetValues() map[string]any // Returns additional values for Error.Values
-    Validate(value any) bool   // Validation result for the value
+    Validate(field string, value any, data map[string]any) bool   // Validation result for the value
 }
 ```

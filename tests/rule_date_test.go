@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	govalidate "github.com/xloss/go-validate"
 	"github.com/xloss/go-validate/rules"
 )
 
@@ -18,7 +19,7 @@ func TestRuleDate(t *testing.T) {
 	text := `{"date1": "2025-04-03T02:01:00-01:00", "date2": "2025-04-03T02:01:00-01:00"}`
 	_ = json.Unmarshal([]byte(text), &data)
 
-	r, errors := Run[testRequest](data, map[string][]any{
+	r, errors := govalidate.Run[testRequest](data, map[string][]any{
 		"date1": {&rules.Date{}},
 		"date2": {"date"},
 	})
@@ -37,7 +38,7 @@ func TestRuleDate(t *testing.T) {
 	text = `{"date1": "2025-04-03 02:01:00", "date2": "2025-04-03"}`
 	_ = json.Unmarshal([]byte(text), &data)
 
-	r, errors = Run[testRequest](data, map[string][]any{
+	r, errors = govalidate.Run[testRequest](data, map[string][]any{
 		"date1": {&rules.Date{}},
 		"date2": {&rules.Date{}},
 	})

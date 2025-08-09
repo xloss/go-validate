@@ -213,7 +213,7 @@ func validateFields(fieldRules map[string][]any, data map[string]any, errors *[]
 		}
 
 		for _, rule := range r {
-			if ok := rule.Validate(data[field]); !ok {
+			if ok := rule.Validate(field, data[field], data); !ok {
 				*errors = append(*errors, Error{
 					Attribute: field,
 					Name:      rule.GetName(),
