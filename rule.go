@@ -55,6 +55,8 @@ func nameToRule(rule string) Rule {
 		return &rules.Confirmed{}
 	case "accepted":
 		return &rules.Accepted{}
+	case "uuid":
+		return &rules.UUID{}
 	}
 
 	return nil

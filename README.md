@@ -48,6 +48,7 @@ if len(errors) != 0 {
 | &rules.Email     | email         | Email Validation  in RFC5322 format                                            | Name: "email"                                                                         |
 | &rules.Confirmed | confirmed     | The field under validation must have a matching field of {field}_confirmation. | Name: "confirmed"                                                                     |
 | &rules.Accepted  | accepted      | The field under validation must be "yes", "on", 1, "1", true, or "true".       | Name: "accepted"                                                                      |
+| &rules.UUID      | uuid          | The field under validation must be a valid RFC 9562 UUID.                      | Name: "uuid"                                                                          |
 
 ## Description
 
