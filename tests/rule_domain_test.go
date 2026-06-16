@@ -95,3 +95,117 @@ func TestRuleDomain(t *testing.T) {
 		}
 	}
 }
+
+func TestRuleDomainOneCharacterLabel(t *testing.T) {
+	type testRequest struct {
+		Domain string `json:"domain"`
+	}
+
+	var data map[string]any
+	r1text := `{"domain": "a.com"}`
+	_ = json.Unmarshal([]byte(r1text), &data)
+
+	r, errors := govalidate.Run[testRequest](data, map[string][]any{
+		"domain": {"domain"},
+	})
+
+	if len(errors) != 0 {
+		t.Errorf("Errors should be 0. %+v", errors)
+	}
+
+	if r.Domain != "a.com" {
+		t.Errorf("Domain should be a.com")
+	}
+}
+
+func TestRuleDomainOptional(t *testing.T) {
+	type testRequest struct {
+		Domain string `json:"domain"`
+	}
+
+	data := map[string]any{}
+
+	r, errors := govalidate.Run[testRequest](data, map[string][]any{
+		"domain": {"domain"},
+	})
+
+	if len(errors) != 0 {
+		t.Errorf("Errors should be 0. %+v", errors)
+	}
+
+	if r == nil {
+		t.Errorf("Result should not be nil")
+		return
+	}
+
+	if r.Domain != "" {
+		t.Errorf("Domain should be empty")
+	}
+}
+
+func TestRuleDomainOptionalPointer(t *testing.T) {
+	type testRequest struct {
+		Domain *string `json:"domain"`
+	}
+
+	data := map[string]any{}
+
+	r, errors := govalidate.Run[testRequest](data, map[string][]any{
+		"domain": {"domain"},
+	})
+
+	if len(errors) != 0 {
+		t.Errorf("Errors should be 0. %+v", errors)
+	}
+
+	if r == nil {
+		t.Errorf("Result should not be nil")
+		return
+	}
+
+	if r.Domain != nil {
+		t.Errorf("Domain should be nil")
+	}
+}
+
+func TestRuleDomainRequired(t *testing.T) {
+	type testRequest struct {
+		Domain string `json:"domain"`
+	}
+
+	data := map[string]any{}
+
+	_, errors := govalidate.Run[testRequest](data, map[string][]any{
+		"domain": {"required", "domain"},
+	})
+
+	if len(errors) != 1 {
+		t.Errorf("Errors should be 1. %+v", errors)
+	}
+
+	if len(errors) == 1 && errors[0].Name != "required" {
+		t.Errorf("Error should be required")
+	}
+}
+
+func TestRuleDomainUppercaseError(t *testing.T) {
+	type testRequest struct {
+		Domain string `json:"domain"`
+	}
+
+	var data map[string]any
+	r1text := `{"domain": "Example.COM"}`
+	_ = json.Unmarshal([]byte(r1text), &data)
+
+	_, errors := govalidate.Run[testRequest](data, map[string][]any{
+		"domain": {"domain"},
+	})
+
+	if len(errors) != 1 {
+		t.Errorf("Errors should be 1. %+v", errors)
+	}
+
+	if len(errors) == 1 && errors[0].Name != "domain" {
+		t.Errorf("Error should be domain")
+	}
+}

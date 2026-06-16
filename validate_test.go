@@ -2,7 +2,9 @@ package go_validate
 
 import (
 	"encoding/json"
+	"math"
 	"testing"
+	"time"
 )
 
 func TestValidateInt(t *testing.T) {
@@ -538,7 +540,7 @@ func TestValidateStructs(t *testing.T) {
 		t.Errorf("obj_ptr expected nil, got %v", *tr1.ObjPtr)
 	}
 	if len(errors) != 2 {
-		t.Errorf("there should be only 4 errors. %+v", errors)
+		t.Errorf("there should be only 2 errors. %+v", errors)
 	} else {
 		if errors[0].Attribute != "obj_val" || errors[0].Name != "format" {
 			t.Errorf("errors[0] expected attributes, got %v", errors[0])
@@ -614,13 +616,13 @@ func TestValidateSliceInt(t *testing.T) {
 	if len(tr.IntVal) != 0 {
 		t.Errorf("the data does not match. %+v", tr.IntVal)
 	}
-	if len(tr.IntNil) != 3 || tr.IntNil[0] != 1 || tr.IntNil[1] != 0 || tr.IntNil[2] != 3 {
+	if len(tr.IntNil) != 3 || tr.IntNil[0] != 1 || tr.IntNil[1] != 0 || tr.IntNil[2] != 0 {
 		t.Errorf("the data does not match. %+v", tr.IntNil)
 	}
 	if tr.IntPtr != nil {
 		t.Errorf("int_ptr expected nil, got %v", tr.IntPtr)
 	}
-	if len(errors) != 3 {
+	if len(errors) != 4 {
 		t.Errorf("there should be 2 errors. %+v", errors)
 	}
 }
@@ -690,13 +692,13 @@ func TestValidateSliceUInt(t *testing.T) {
 	if len(tr.IntVal) != 0 {
 		t.Errorf("the data does not match. %+v", tr.IntVal)
 	}
-	if len(tr.IntNil) != 3 || tr.IntNil[0] != 1 || tr.IntNil[1] != 0 || tr.IntNil[2] != 3 {
+	if len(tr.IntNil) != 3 || tr.IntNil[0] != 1 || tr.IntNil[1] != 0 || tr.IntNil[2] != 0 {
 		t.Errorf("the data does not match. %+v", tr.IntNil)
 	}
 	if tr.IntPtr != nil {
 		t.Errorf("uint_ptr expected nil, got %v", tr.IntPtr)
 	}
-	if len(errors) != 3 {
+	if len(errors) != 4 {
 		t.Errorf("there should be 2 errors. %+v", errors)
 	}
 }
@@ -1016,5 +1018,439 @@ func TestValidateMap(t *testing.T) {
 	}
 	if len(errors) > 0 {
 		t.Errorf("there were errors when converting the data. %+v", errors)
+	}
+}
+
+func TestValidateMapInvalidType(t *testing.T) {
+	type testRequest struct {
+		Map1 map[string]int `json:"map1"`
+	}
+
+	data := map[string]any{
+		"map1": 123,
+	}
+
+	r, errors := Run[testRequest](data, map[string][]any{})
+
+	if r.Map1 != nil {
+		t.Errorf("map1 expected nil, got %+v", r.Map1)
+	}
+
+	if len(errors) != 1 {
+		t.Errorf("there should be 1 error. %+v", errors)
+	} else {
+		if errors[0].Attribute != "map1" || errors[0].Name != "format" {
+			t.Errorf("errors[0] expected attributes, got %v", errors[0])
+		}
+	}
+}
+
+func TestValidateTimeInvalidType(t *testing.T) {
+	type testRequest struct {
+		Date time.Time `json:"date"`
+	}
+
+	data := map[string]any{
+		"date": 123,
+	}
+
+	r, errors := Run[testRequest](data, map[string][]any{})
+
+	if !r.Date.IsZero() {
+		t.Errorf("date expected zero time, got %v", r.Date)
+	}
+
+	if len(errors) != 1 {
+		t.Errorf("there should be 1 error. %+v", errors)
+	} else {
+		if errors[0].Attribute != "date" || errors[0].Name != "format" {
+			t.Errorf("errors[0] expected attributes, got %v", errors[0])
+		}
+	}
+}
+
+func TestValidateStructUnexportedField(t *testing.T) {
+	type testRequest struct {
+		ID     int    `json:"id"`
+		secret string `json:"secret"`
+	}
+
+	data := map[string]any{
+		"id":     10,
+		"secret": "hidden",
+	}
+
+	r, errors := Run[testRequest](data, map[string][]any{})
+
+	if r.ID != 10 {
+		t.Errorf("id expected 10, got %d", r.ID)
+	}
+
+	if r.secret != "" {
+		t.Errorf("secret expected empty, got %s", r.secret)
+	}
+
+	if len(errors) != 0 {
+		t.Errorf("there should be no errors. %+v", errors)
+	}
+}
+
+func TestValidateJSONTagOptions(t *testing.T) {
+	type testRequest struct {
+		Name string `json:"name,omitempty"`
+	}
+
+	data := map[string]any{
+		"name": "John",
+	}
+
+	r, errors := Run[testRequest](data, map[string][]any{})
+
+	if r.Name != "John" {
+		t.Errorf("name expected John, got %s", r.Name)
+	}
+
+	if len(errors) != 0 {
+		t.Errorf("there should be no errors. %+v", errors)
+	}
+}
+
+func TestValidateJSONTagDash(t *testing.T) {
+	type testRequest struct {
+		Name   string `json:"name"`
+		Secret string `json:"-"`
+	}
+
+	data := map[string]any{
+		"name":   "John",
+		"-":      "wrong",
+		"Secret": "also wrong",
+	}
+
+	r, errors := Run[testRequest](data, map[string][]any{})
+
+	if r.Name != "John" {
+		t.Errorf("name expected John, got %s", r.Name)
+	}
+
+	if r.Secret != "" {
+		t.Errorf("secret expected empty, got %s", r.Secret)
+	}
+
+	if len(errors) != 0 {
+		t.Errorf("there should be no errors. %+v", errors)
+	}
+}
+
+func TestValidateIntFractionalNumber(t *testing.T) {
+	type testRequest struct {
+		IntVal int `json:"int_val"`
+	}
+
+	data := map[string]any{
+		"int_val": 1.5,
+	}
+
+	r, errors := Run[testRequest](data, map[string][]any{})
+
+	if r.IntVal != 0 {
+		t.Errorf("int_val expected 0, got %d", r.IntVal)
+	}
+
+	if len(errors) != 1 {
+		t.Errorf("there should be 1 error. %+v", errors)
+	} else {
+		if errors[0].Attribute != "int_val" || errors[0].Name != "format" {
+			t.Errorf("errors[0] expected attributes, got %v", errors[0])
+		}
+	}
+}
+
+func TestValidateIntOverflow(t *testing.T) {
+	type testRequest struct {
+		Int8Val int8 `json:"int8_val"`
+	}
+
+	data := map[string]any{
+		"int8_val": float64(128),
+	}
+
+	r, errors := Run[testRequest](data, map[string][]any{})
+
+	if r.Int8Val != 0 {
+		t.Errorf("int8_val expected 0, got %d", r.Int8Val)
+	}
+
+	if len(errors) != 1 {
+		t.Errorf("there should be 1 error. %+v", errors)
+	} else {
+		if errors[0].Attribute != "int8_val" || errors[0].Name != "format" {
+			t.Errorf("errors[0] expected attributes, got %v", errors[0])
+		}
+	}
+}
+
+func TestValidateUIntNegativeNumber(t *testing.T) {
+	type testRequest struct {
+		UIntVal uint `json:"uint_val"`
+	}
+
+	data := map[string]any{
+		"uint_val": float64(-1),
+	}
+
+	r, errors := Run[testRequest](data, map[string][]any{})
+
+	if r.UIntVal != 0 {
+		t.Errorf("uint_val expected 0, got %d", r.UIntVal)
+	}
+
+	if len(errors) != 1 {
+		t.Errorf("there should be 1 error. %+v", errors)
+	} else {
+		if errors[0].Attribute != "uint_val" || errors[0].Name != "format" {
+			t.Errorf("errors[0] expected attributes, got %v", errors[0])
+		}
+	}
+}
+
+func TestValidatePointerRequestType(t *testing.T) {
+	type testRequest struct {
+		ID int `json:"id"`
+	}
+
+	data := map[string]any{
+		"id": 1,
+	}
+
+	r, errors := Run[*testRequest](data, map[string][]any{})
+
+	if r != nil {
+		t.Errorf("result expected nil, got %+v", r)
+	}
+
+	if len(errors) != 1 {
+		t.Errorf("there should be 1 error. %+v", errors)
+	} else {
+		if errors[0].Name != "type" {
+			t.Errorf("errors[0] expected type, got %v", errors[0])
+		}
+	}
+}
+
+func TestValidateJSONTagEmptyNameWithOptions(t *testing.T) {
+	type testRequest struct {
+		Name string `json:",omitempty"`
+	}
+
+	data := map[string]any{
+		"Name": "John",
+	}
+
+	r, errors := Run[testRequest](data, map[string][]any{})
+
+	if r.Name != "John" {
+		t.Errorf("name expected John, got %s", r.Name)
+	}
+
+	if len(errors) != 0 {
+		t.Errorf("there should be no errors. %+v", errors)
+	}
+}
+
+func TestValidateJSONTagDashWithOptions(t *testing.T) {
+	type testRequest struct {
+		Name   string `json:"name"`
+		Secret string `json:"-,omitempty"`
+	}
+
+	data := map[string]any{
+		"name":   "John",
+		"-":      "wrong",
+		"Secret": "also wrong",
+	}
+
+	r, errors := Run[testRequest](data, map[string][]any{})
+
+	if r.Name != "John" {
+		t.Errorf("name expected John, got %s", r.Name)
+	}
+
+	if r.Secret != "" {
+		t.Errorf("secret expected empty, got %s", r.Secret)
+	}
+
+	if len(errors) != 0 {
+		t.Errorf("there should be no errors. %+v", errors)
+	}
+}
+
+func TestValidateMapInvalidKeyType(t *testing.T) {
+	type testRequest struct {
+		Map1 map[int]int `json:"map1"`
+	}
+
+	data := map[string]any{
+		"map1": map[string]any{
+			"1": 2,
+		},
+	}
+
+	r, errors := Run[testRequest](data, map[string][]any{})
+
+	if r.Map1 != nil {
+		t.Errorf("map1 expected nil, got %+v", r.Map1)
+	}
+
+	if len(errors) != 1 {
+		t.Errorf("there should be 1 error. %+v", errors)
+	} else {
+		if errors[0].Attribute != "map1" || errors[0].Name != "format" {
+			t.Errorf("errors[0] expected attributes, got %v", errors[0])
+		}
+	}
+}
+
+func TestValidateUIntFromNegativeInteger(t *testing.T) {
+	type testRequest struct {
+		UIntVal uint `json:"uint_val"`
+	}
+
+	data := map[string]any{
+		"uint_val": int(-1),
+	}
+
+	r, errors := Run[testRequest](data, map[string][]any{})
+
+	if r.UIntVal != 0 {
+		t.Errorf("uint_val expected 0, got %d", r.UIntVal)
+	}
+
+	if len(errors) != 1 {
+		t.Errorf("there should be 1 error. %+v", errors)
+	} else {
+		if errors[0].Attribute != "uint_val" || errors[0].Name != "format" {
+			t.Errorf("errors[0] expected attributes, got %v", errors[0])
+		}
+	}
+}
+
+func TestValidateIntFromUint64Overflow(t *testing.T) {
+	type testRequest struct {
+		IntVal int64 `json:"int_val"`
+	}
+
+	data := map[string]any{
+		"int_val": uint64(math.MaxUint64),
+	}
+
+	r, errors := Run[testRequest](data, map[string][]any{})
+
+	if r.IntVal != 0 {
+		t.Errorf("int_val expected 0, got %d", r.IntVal)
+	}
+
+	if len(errors) != 1 {
+		t.Errorf("there should be 1 error. %+v", errors)
+	} else {
+		if errors[0].Attribute != "int_val" || errors[0].Name != "format" {
+			t.Errorf("errors[0] expected attributes, got %v", errors[0])
+		}
+	}
+}
+
+func TestValidateIntFromIntegerOverflow(t *testing.T) {
+	type testRequest struct {
+		Int8Val int8 `json:"int8_val"`
+	}
+
+	data := map[string]any{
+		"int8_val": int16(200),
+	}
+
+	r, errors := Run[testRequest](data, map[string][]any{})
+
+	if r.Int8Val != 0 {
+		t.Errorf("int8_val expected 0, got %d", r.Int8Val)
+	}
+
+	if len(errors) != 1 {
+		t.Errorf("there should be 1 error. %+v", errors)
+	} else {
+		if errors[0].Attribute != "int8_val" || errors[0].Name != "format" {
+			t.Errorf("errors[0] expected attributes, got %v", errors[0])
+		}
+	}
+}
+
+func TestValidateMapCustomStringKey(t *testing.T) {
+	type testKey string
+
+	type testRequest struct {
+		Map1 map[testKey]int `json:"map1"`
+	}
+
+	data := map[string]any{
+		"map1": map[string]any{
+			"one": float64(1),
+		},
+	}
+
+	r, errors := Run[testRequest](data, map[string][]any{})
+
+	if len(errors) != 0 {
+		t.Errorf("there should be no errors. %+v", errors)
+	}
+
+	if len(r.Map1) != 1 || r.Map1["one"] != 1 {
+		t.Errorf("map1 expected one value, got %+v", r.Map1)
+	}
+}
+
+func TestValidateInt64FloatOverflow(t *testing.T) {
+	type testRequest struct {
+		IntVal int64 `json:"int_val"`
+	}
+
+	data := map[string]any{
+		"int_val": math.Pow(2, 63),
+	}
+
+	r, errors := Run[testRequest](data, map[string][]any{})
+
+	if r.IntVal != 0 {
+		t.Errorf("int_val expected 0, got %d", r.IntVal)
+	}
+
+	if len(errors) != 1 {
+		t.Errorf("there should be 1 error. %+v", errors)
+	} else {
+		if errors[0].Attribute != "int_val" || errors[0].Name != "format" {
+			t.Errorf("errors[0] expected attributes, got %v", errors[0])
+		}
+	}
+}
+
+func TestValidateUInt64FloatOverflow(t *testing.T) {
+	type testRequest struct {
+		UIntVal uint64 `json:"uint_val"`
+	}
+
+	data := map[string]any{
+		"uint_val": math.Pow(2, 64),
+	}
+
+	r, errors := Run[testRequest](data, map[string][]any{})
+
+	if r.UIntVal != 0 {
+		t.Errorf("uint_val expected 0, got %d", r.UIntVal)
+	}
+
+	if len(errors) != 1 {
+		t.Errorf("there should be 1 error. %+v", errors)
+	} else {
+		if errors[0].Attribute != "uint_val" || errors[0].Name != "format" {
+			t.Errorf("errors[0] expected attributes, got %v", errors[0])
+		}
 	}
 }

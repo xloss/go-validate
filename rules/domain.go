@@ -22,16 +22,17 @@ func (r *Domain) Validate(_ string, value any, _ map[string]any) bool {
 	r.name = "domain"
 
 	if value == nil {
+		return true
+	}
+
+	v, ok := value.(string)
+	if !ok {
 		return false
 	}
 
-	switch value.(type) {
-	case string:
-	default:
+	if v == "" {
 		return false
 	}
-
-	v := value.(string)
 
 	d, err := idna.ToASCII(v)
 	if err != nil {
@@ -49,12 +50,12 @@ func (r *Domain) Validate(_ string, value any, _ map[string]any) bool {
 	for _, part := range parts {
 		lp := len(part)
 
-		if lp < 2 || lp > 63 {
+		if lp < 1 || lp > 63 {
 			return false
 		}
 
 		idn := strings.HasPrefix(part, "xn--")
-		if !idn && part[2] == '-' && part[3] == '-' {
+		if !idn && lp >= 4 && part[2] == '-' && part[3] == '-' {
 			return false
 		}
 

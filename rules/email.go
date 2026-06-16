@@ -20,21 +20,22 @@ func (r *Email) Validate(_ string, value any, _ map[string]any) bool {
 	r.name = "email"
 
 	if value == nil {
+		return true
+	}
+
+	v, ok := value.(string)
+	if !ok {
 		return false
 	}
 
-	switch value.(type) {
-	case string:
-	default:
+	if v == "" {
 		return false
 	}
 
-	v := value.(string)
-
-	_, err := mail.ParseAddress(v)
+	addr, err := mail.ParseAddress(v)
 	if err != nil {
 		return false
 	}
 
-	return true
+	return addr.Address == v
 }

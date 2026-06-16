@@ -36,48 +36,122 @@ func (r *Min) Validate(_ string, value any, _ map[string]any) bool {
 		"min": r.Min,
 	}
 
-	switch value.(type) {
+	switch v := value.(type) {
 	case nil:
 		return true
 	case string:
 		r.name = "min.string"
-		return len(value.(string)) >= r.Min
-	case int8:
-		return value.(int) >= r.Min
-	case uint8:
-		return value.(int) >= r.Min
-	case int16:
-		return value.(int) >= r.Min
-	case uint16:
-		return value.(int) >= r.Min
-	case int32:
-		return value.(int) >= r.Min
-	case uint32:
-		return value.(int) >= r.Min
-	case int64:
-		return value.(int) >= r.Min
-	case uint64:
-		return value.(int) >= r.Min
+		return len(v) >= r.Min
 	case int:
-		return value.(int) >= r.Min
+		return v >= r.Min
+	case int8:
+		return int(v) >= r.Min
+	case int16:
+		return int(v) >= r.Min
+	case int32:
+		return int64(v) >= int64(r.Min)
+	case int64:
+		return v >= int64(r.Min)
 	case uint:
-		return value.(int) >= r.Min
+		if r.Min < 0 {
+			return true
+		}
+
+		return v >= uint(r.Min)
+	case uint8:
+		if r.Min < 0 {
+			return true
+		}
+
+		return uint(v) >= uint(r.Min)
+	case uint16:
+		if r.Min < 0 {
+			return true
+		}
+
+		return uint(v) >= uint(r.Min)
+	case uint32:
+		if r.Min < 0 {
+			return true
+		}
+
+		return uint64(v) >= uint64(r.Min)
+	case uint64:
+		if r.Min < 0 {
+			return true
+		}
+
+		return v >= uint64(r.Min)
 	case float32:
-		return value.(float32) >= float32(r.Min)
+		return v >= float32(r.Min)
 	case float64:
-		return value.(float64) >= float64(r.Min)
+		return v >= float64(r.Min)
 	case []any:
 		r.name = "min.array"
-		return len(value.([]any)) >= r.Min
+		return len(v) >= r.Min
+	case []string:
+		r.name = "min.array"
+		return len(v) >= r.Min
+	case []int:
+		r.name = "min.array"
+		return len(v) >= r.Min
+	case []int8:
+		r.name = "min.array"
+		return len(v) >= r.Min
+	case []int16:
+		r.name = "min.array"
+		return len(v) >= r.Min
+	case []int32:
+		r.name = "min.array"
+		return len(v) >= r.Min
+	case []int64:
+		r.name = "min.array"
+		return len(v) >= r.Min
+	case []uint:
+		r.name = "min.array"
+		return len(v) >= r.Min
+	case []uint8:
+		r.name = "min.array"
+		return len(v) >= r.Min
+	case []uint16:
+		r.name = "min.array"
+		return len(v) >= r.Min
+	case []uint32:
+		r.name = "min.array"
+		return len(v) >= r.Min
+	case []uint64:
+		r.name = "min.array"
+		return len(v) >= r.Min
+	case []float32:
+		r.name = "min.array"
+		return len(v) >= r.Min
+	case []float64:
+		r.name = "min.array"
+		return len(v) >= r.Min
+	case []bool:
+		r.name = "min.array"
+		return len(v) >= r.Min
 	case map[string]any:
 		r.name = "min.array"
-		return len(value.(map[string]any)) >= r.Min
+		return len(v) >= r.Min
 	case map[int]any:
 		r.name = "min.array"
-		return len(value.(map[int]any)) >= r.Min
+		return len(v) >= r.Min
 	case map[float64]any:
 		r.name = "min.array"
-		return len(value.(map[float64]any)) >= r.Min
+		return len(v) >= r.Min
+	case map[string]string:
+		r.name = "min.array"
+		return len(v) >= r.Min
+	case map[string]int:
+		r.name = "min.array"
+		return len(v) >= r.Min
+	case map[string]float64:
+		r.name = "min.array"
+		return len(v) >= r.Min
+	case map[string]bool:
+		r.name = "min.array"
+		return len(v) >= r.Min
 	default:
 		r.name = "min.error"
 		return false

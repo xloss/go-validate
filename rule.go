@@ -59,5 +59,7 @@ func nameToRule(rule string) Rule {
 		return &rules.UUID{}
 	}
 
-	return nil
+	errRule := &rules.Error{}
+	errRule.AddParams(rule)
+	return errRule
 }

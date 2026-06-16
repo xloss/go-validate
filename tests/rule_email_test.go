@@ -13,6 +13,7 @@ func TestRuleEmail(t *testing.T) {
 		Mail1 string `json:"mail1"`
 		Mail2 string `json:"mail2"`
 		Mail3 string `json:"mail3"`
+		Mail4 string `json:"mail4"`
 	}
 
 	var data map[string]any
@@ -23,6 +24,7 @@ func TestRuleEmail(t *testing.T) {
 		"mail1": {&rules.Email{}},
 		"mail2": {&rules.Email{}},
 		"mail3": {"email"},
+		"mail4": {"email"},
 	})
 
 	if len(errors) != 0 {
@@ -38,18 +40,22 @@ func TestRuleEmail(t *testing.T) {
 	if r.Mail3 != "name@example.com" {
 		t.Errorf("Email should be name@example.com")
 	}
+	if r.Mail4 != "" {
+		t.Errorf("Email should be empty")
+	}
 
-	r2text := `{"mail1": "localhost", "mail2": "example.com", "mail3": "mail@example.com"}`
+	r2text := `{"mail1": "localhost", "mail2": "example.com", "mail3": "mail@example.com", "mail4": "John Doe <john@example.com>"}`
 	_ = json.Unmarshal([]byte(r2text), &data)
 
 	r, errors = govalidate.Run[testRequest](data, map[string][]any{
 		"mail1": {&rules.Email{}},
 		"mail2": {&rules.Email{}},
 		"mail3": {&rules.Email{}},
+		"mail4": {&rules.Email{}},
 	})
 
-	if len(errors) != 2 {
-		t.Errorf("Errors should be 2")
+	if len(errors) != 3 {
+		t.Errorf("Errors should be 3")
 	}
 
 	for _, err := range errors {
@@ -57,6 +63,8 @@ func TestRuleEmail(t *testing.T) {
 		case "mail1":
 			fallthrough
 		case "mail2":
+			fallthrough
+		case "mail4":
 			if err.Name != "email" {
 				t.Errorf("Error should be email")
 			}

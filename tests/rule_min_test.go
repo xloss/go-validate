@@ -158,3 +158,97 @@ func TestRuleMin(t *testing.T) {
 		}
 	}
 }
+
+func TestRuleMinIntegerTypes(t *testing.T) {
+	type testRequest struct {
+		Int8Val   int8   `json:"int8_val"`
+		UInt8Val  uint8  `json:"uint8_val"`
+		Int16Val  int16  `json:"int16_val"`
+		UInt16Val uint16 `json:"uint16_val"`
+		Int32Val  int32  `json:"int32_val"`
+		UInt32Val uint32 `json:"uint32_val"`
+		Int64Val  int64  `json:"int64_val"`
+		UInt64Val uint64 `json:"uint64_val"`
+	}
+
+	data := map[string]any{
+		"int8_val":   int8(10),
+		"uint8_val":  uint8(10),
+		"int16_val":  int16(10),
+		"uint16_val": uint16(10),
+		"int32_val":  int32(10),
+		"uint32_val": uint32(10),
+		"int64_val":  int64(10),
+		"uint64_val": uint64(10),
+	}
+
+	r, errors := govalidate.Run[testRequest](data, map[string][]any{
+		"int8_val":   {"min:5"},
+		"uint8_val":  {"min:5"},
+		"int16_val":  {"min:5"},
+		"uint16_val": {"min:5"},
+		"int32_val":  {"min:5"},
+		"uint32_val": {"min:5"},
+		"int64_val":  {"min:5"},
+		"uint64_val": {"min:5"},
+	})
+
+	if len(errors) != 0 {
+		t.Errorf("Errors should be 0. %+v", errors)
+	}
+
+	if r.Int8Val != 10 {
+		t.Errorf("Int8Val should be 10")
+	}
+	if r.UInt8Val != 10 {
+		t.Errorf("UInt8Val should be 10")
+	}
+	if r.Int16Val != 10 {
+		t.Errorf("Int16Val should be 10")
+	}
+	if r.UInt16Val != 10 {
+		t.Errorf("UInt16Val should be 10")
+	}
+	if r.Int32Val != 10 {
+		t.Errorf("Int32Val should be 10")
+	}
+	if r.UInt32Val != 10 {
+		t.Errorf("UInt32Val should be 10")
+	}
+	if r.Int64Val != 10 {
+		t.Errorf("Int64Val should be 10")
+	}
+	if r.UInt64Val != 10 {
+		t.Errorf("UInt64Val should be 10")
+	}
+}
+
+func TestRuleMinIntegerTypesErrors(t *testing.T) {
+	type testRequest struct {
+		Int8Val int8  `json:"int8_val"`
+		UIntVal uint  `json:"uint_val"`
+		IntVal  int64 `json:"int_val"`
+	}
+
+	data := map[string]any{
+		"int8_val": int8(2),
+		"uint_val": uint(2),
+		"int_val":  int64(2),
+	}
+
+	_, errors := govalidate.Run[testRequest](data, map[string][]any{
+		"int8_val": {"min:5"},
+		"uint_val": {"min:5"},
+		"int_val":  {"min:5"},
+	})
+
+	if len(errors) != 3 {
+		t.Errorf("Errors should be 3. %+v", errors)
+	}
+
+	for _, err := range errors {
+		if err.Name != "min.numeric" {
+			t.Errorf("Error should be min.numeric")
+		}
+	}
+}

@@ -1,5 +1,7 @@
 package rules
 
+import "math"
+
 type Integer struct {
 	name string
 }
@@ -19,7 +21,7 @@ func (r *Integer) Validate(_ string, value any, _ map[string]any) bool {
 		return true
 	}
 
-	switch value.(type) {
+	switch v := value.(type) {
 	case int:
 	case int8:
 	case int16:
@@ -31,9 +33,7 @@ func (r *Integer) Validate(_ string, value any, _ map[string]any) bool {
 	case uint32:
 	case uint64:
 	case float64:
-		v, okFloat := value.(float64)
-
-		return okFloat && v == float64(int(v))
+		return math.Trunc(v) == v
 	default:
 		return false
 	}
