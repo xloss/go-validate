@@ -57,6 +57,10 @@ func nameToRule(rule string) Rule {
 		return &rules.Accepted{}
 	case "uuid":
 		return &rules.UUID{}
+	case "array":
+		return &rules.Array{}
+	case "json":
+		return &rules.JSON{}
 	}
 
 	errRule := &rules.Error{}

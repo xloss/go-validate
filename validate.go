@@ -1,6 +1,7 @@
 package go_validate
 
 import (
+	"encoding/json"
 	"math"
 	"reflect"
 	"strconv"
@@ -133,6 +134,10 @@ func setValue(typ reflect.Type, data any, value reflect.Value, field string, err
 			}
 		}
 	case reflect.Slice:
+		if isRawMessage(typ) {
+			return rawMessageValue(typ, data, value, field, errors)
+		}
+
 		sliceValue(typ, data, value, field, errors)
 	case reflect.Map:
 		mapValue(typ, data, value, field, errors)
@@ -141,6 +146,27 @@ func setValue(typ reflect.Type, data any, value reflect.Value, field string, err
 		if ok := setValue(typ.Elem(), data, n.Elem(), field, errors); ok {
 			value.Set(n)
 		}
+	case reflect.Interface:
+		dataValue := reflect.ValueOf(data)
+		if !dataValue.IsValid() {
+			return true
+		}
+
+		if dataValue.Type().AssignableTo(typ) || dataValue.Type().Implements(typ) {
+			value.Set(dataValue)
+			return true
+		}
+
+		*errors = append(*errors, Error{
+			Attribute: field,
+			Name:      "format",
+			Values: map[string]any{
+				"name":    typ.String(),
+				"reflect": typ.Kind().String(),
+			},
+		})
+
+		return false
 	default:
 		*errors = append(*errors, Error{
 			Attribute: field,
@@ -372,13 +398,16 @@ func validateFields(fieldRules map[string][]any, data map[string]any, errors *[]
 	for field, rules := range fieldRules {
 		r := make([]Rule, 0)
 		for _, v := range rules {
-			switch v.(type) {
+			switch ruleValue := v.(type) {
 			case Rule:
-				r = append(r, v.(Rule))
+				r = append(r, ruleValue)
 			case string:
-				rule := nameToRule(v.(string))
-
+				rule := nameToRule(ruleValue)
 				if rule != nil {
+					r = append(r, rule)
+				}
+			default:
+				if rule := valueToRule(v); rule != nil {
 					r = append(r, rule)
 				}
 			}
@@ -393,5 +422,58 @@ func validateFields(fieldRules map[string][]any, data map[string]any, errors *[]
 				})
 			}
 		}
+	}
+}
+
+func valueToRule(value any) Rule {
+	v := reflect.ValueOf(value)
+	if !v.IsValid() {
+		return nil
+	}
+
+	if v.Kind() == reflect.Ptr {
+		return nil
+	}
+
+	ptr := reflect.New(v.Type())
+	ptr.Elem().Set(v)
+
+	rule, ok := ptr.Interface().(Rule)
+	if !ok {
+		return nil
+	}
+
+	return rule
+}
+
+func isRawMessage(typ reflect.Type) bool {
+	return typ.PkgPath() == "encoding/json" && typ.Name() == "RawMessage"
+}
+
+func rawMessageValue(typ reflect.Type, data any, value reflect.Value, field string, errors *[]Error) bool {
+	switch v := data.(type) {
+	case json.RawMessage:
+		value.Set(reflect.ValueOf(v))
+		return true
+	case []byte:
+		value.Set(reflect.ValueOf(json.RawMessage(v)))
+		return true
+	default:
+		b, err := json.Marshal(v)
+		if err != nil {
+			*errors = append(*errors, Error{
+				Attribute: field,
+				Name:      "format",
+				Values: map[string]any{
+					"name":    typ.String(),
+					"reflect": typ.Kind().String(),
+				},
+			})
+
+			return false
+		}
+
+		value.Set(reflect.ValueOf(json.RawMessage(b)))
+		return true
 	}
 }

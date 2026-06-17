@@ -5,6 +5,8 @@ import (
 	"math"
 	"testing"
 	"time"
+
+	"github.com/xloss/go-validate/rules"
 )
 
 func TestValidateInt(t *testing.T) {
@@ -1451,6 +1453,254 @@ func TestValidateUInt64FloatOverflow(t *testing.T) {
 	} else {
 		if errors[0].Attribute != "uint_val" || errors[0].Name != "format" {
 			t.Errorf("errors[0] expected attributes, got %v", errors[0])
+		}
+	}
+}
+
+func TestValidateRawMessageObject(t *testing.T) {
+	type testRequest struct {
+		Raw json.RawMessage `json:"raw"`
+	}
+
+	var data map[string]any
+	r1text := `{"raw":{"a":1,"b":true}}`
+	_ = json.Unmarshal([]byte(r1text), &data)
+
+	r, errors := Run[testRequest](data, map[string][]any{})
+
+	if len(errors) != 0 {
+		t.Errorf("there should be no errors. %+v", errors)
+	}
+
+	if string(r.Raw) != `{"a":1,"b":true}` && string(r.Raw) != `{"b":true,"a":1}` {
+		t.Errorf("raw expected json object, got %s", string(r.Raw))
+	}
+}
+
+func TestValidateRawMessageString(t *testing.T) {
+	type testRequest struct {
+		Raw json.RawMessage `json:"raw"`
+	}
+
+	var data map[string]any
+	r1text := `{"raw":"hello"}`
+	_ = json.Unmarshal([]byte(r1text), &data)
+
+	r, errors := Run[testRequest](data, map[string][]any{})
+
+	if len(errors) != 0 {
+		t.Errorf("there should be no errors. %+v", errors)
+	}
+
+	if string(r.Raw) != `"hello"` {
+		t.Errorf("raw expected json string, got %s", string(r.Raw))
+	}
+}
+
+func TestValidateRawMessageArray(t *testing.T) {
+	type testRequest struct {
+		Raw json.RawMessage `json:"raw"`
+	}
+
+	var data map[string]any
+	r1text := `{"raw":[1,2,3]}`
+	_ = json.Unmarshal([]byte(r1text), &data)
+
+	r, errors := Run[testRequest](data, map[string][]any{})
+
+	if len(errors) != 0 {
+		t.Errorf("there should be no errors. %+v", errors)
+	}
+
+	if string(r.Raw) != `[1,2,3]` {
+		t.Errorf("raw expected json array, got %s", string(r.Raw))
+	}
+}
+
+func TestValidateAny(t *testing.T) {
+	type testRequest struct {
+		AnyString any `json:"any_string"`
+		AnyNumber any `json:"any_number"`
+		AnyBool   any `json:"any_bool"`
+		AnyObject any `json:"any_object"`
+		AnyArray  any `json:"any_array"`
+	}
+
+	var data map[string]any
+	r1text := `{"any_string": "str", "any_number": 1, "any_bool": true, "any_object": {"a": 1}, "any_array": [1, "a", true]}`
+	_ = json.Unmarshal([]byte(r1text), &data)
+
+	r, errors := Run[testRequest](data, map[string][]any{})
+
+	if len(errors) != 0 {
+		t.Errorf("there should be no errors. %+v", errors)
+	}
+
+	if r.AnyString != "str" {
+		t.Errorf("any_string expected str, got %+v", r.AnyString)
+	}
+
+	if r.AnyNumber != float64(1) {
+		t.Errorf("any_number expected 1, got %+v", r.AnyNumber)
+	}
+
+	if r.AnyBool != true {
+		t.Errorf("any_bool expected true, got %+v", r.AnyBool)
+	}
+
+	if obj, ok := r.AnyObject.(map[string]any); !ok || obj["a"] != float64(1) {
+		t.Errorf("any_object does not match. %+v", r.AnyObject)
+	}
+
+	if arr, ok := r.AnyArray.([]any); !ok || len(arr) != 3 || arr[0] != float64(1) || arr[1] != "a" || arr[2] != true {
+		t.Errorf("any_array does not match. %+v", r.AnyArray)
+	}
+}
+
+func TestValidateSliceAny(t *testing.T) {
+	type testRequest struct {
+		Items []any `json:"items"`
+	}
+
+	var data map[string]any
+	r1text := `{"items": [1, "a", true, {"x": 2}]}`
+	_ = json.Unmarshal([]byte(r1text), &data)
+
+	r, errors := Run[testRequest](data, map[string][]any{})
+
+	if len(errors) != 0 {
+		t.Errorf("there should be no errors. %+v", errors)
+	}
+
+	if len(r.Items) != 4 {
+		t.Errorf("items expected 4 elements, got %+v", r.Items)
+		return
+	}
+
+	if r.Items[0] != float64(1) {
+		t.Errorf("items.0 expected 1, got %+v", r.Items[0])
+	}
+
+	if r.Items[1] != "a" {
+		t.Errorf("items.1 expected a, got %+v", r.Items[1])
+	}
+
+	if r.Items[2] != true {
+		t.Errorf("items.2 expected true, got %+v", r.Items[2])
+	}
+
+	if obj, ok := r.Items[3].(map[string]any); !ok || obj["x"] != float64(2) {
+		t.Errorf("items.3 does not match. %+v", r.Items[3])
+	}
+}
+
+func TestValidateMapAny(t *testing.T) {
+	type testRequest struct {
+		Data map[string]any `json:"data"`
+	}
+
+	var data map[string]any
+	r1text := `{"data": {"string": "a", "number": 1, "bool": true, "array": [1, 2], "object": {"x": 2}}}`
+	_ = json.Unmarshal([]byte(r1text), &data)
+
+	r, errors := Run[testRequest](data, map[string][]any{})
+
+	if len(errors) != 0 {
+		t.Errorf("there should be no errors. %+v", errors)
+	}
+
+	if r.Data["string"] != "a" {
+		t.Errorf("data.string expected a, got %+v", r.Data["string"])
+	}
+
+	if r.Data["number"] != float64(1) {
+		t.Errorf("data.number expected 1, got %+v", r.Data["number"])
+	}
+
+	if r.Data["bool"] != true {
+		t.Errorf("data.bool expected true, got %+v", r.Data["bool"])
+	}
+
+	if arr, ok := r.Data["array"].([]any); !ok || len(arr) != 2 || arr[0] != float64(1) || arr[1] != float64(2) {
+		t.Errorf("data.array does not match. %+v", r.Data["array"])
+	}
+
+	if obj, ok := r.Data["object"].(map[string]any); !ok || obj["x"] != float64(2) {
+		t.Errorf("data.object does not match. %+v", r.Data["object"])
+	}
+}
+
+func TestRuleValueInstances(t *testing.T) {
+	type testRequest struct {
+		Name  string `json:"name"`
+		Age   int    `json:"age"`
+		Items []int  `json:"items"`
+	}
+
+	var data map[string]any
+	r1text := `{"name": "John", "age": 21, "items": [1, 2, 3]}`
+	_ = json.Unmarshal([]byte(r1text), &data)
+
+	r, errors := Run[testRequest](data, map[string][]any{
+		"name":  {rules.Required{}, rules.String{}},
+		"age":   {rules.Integer{}, rules.Min{Min: 18}},
+		"items": {rules.Array{}, rules.Min{Min: 2}},
+	})
+
+	if len(errors) != 0 {
+		t.Errorf("Errors should be 0. %+v", errors)
+	}
+
+	if r.Name != "John" {
+		t.Errorf("Name should be John")
+	}
+
+	if r.Age != 21 {
+		t.Errorf("Age should be 21")
+	}
+
+	if len(r.Items) != 3 || r.Items[0] != 1 || r.Items[1] != 2 || r.Items[2] != 3 {
+		t.Errorf("Items does not match. %+v", r.Items)
+	}
+}
+
+func TestRuleValueInstancesErrors(t *testing.T) {
+	type testRequest struct {
+		Name  string `json:"name"`
+		Age   int    `json:"age"`
+		Items []int  `json:"items"`
+	}
+
+	var data map[string]any
+	r1text := `{"name": "", "age": 17, "items": [1]}`
+	_ = json.Unmarshal([]byte(r1text), &data)
+
+	_, errors := Run[testRequest](data, map[string][]any{
+		"name":  {rules.Required{}, rules.String{}},
+		"age":   {rules.Integer{}, rules.Min{Min: 18}},
+		"items": {rules.Array{}, rules.Min{Min: 2}},
+	})
+
+	if len(errors) != 3 {
+		t.Errorf("Errors should be 3. %+v", errors)
+	}
+
+	for _, err := range errors {
+		switch err.Attribute {
+		case "name":
+			if err.Name != "required" {
+				t.Errorf("Name error should be required")
+			}
+		case "age":
+			if err.Name != "min.numeric" {
+				t.Errorf("Age error should be min.numeric")
+			}
+		case "items":
+			if err.Name != "min.array" {
+				t.Errorf("Items error should be min.array")
+			}
+		default:
+			t.Errorf("Unexpected error attribute: %s", err.Attribute)
 		}
 	}
 }

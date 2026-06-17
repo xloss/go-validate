@@ -9,6 +9,7 @@ The library is designed mainly for data decoded from JSON into `map[string]any`.
 ```bash
 go get github.com/xloss/go-validate
 ```
+
 ## Quick Start
 
 ```go
@@ -45,11 +46,11 @@ func main() {
 	}
 
 	fieldRules := map[string][]any{
-		"integer_value":  {"integer"},
-		"string_value":   {"string"},
-		"numeric_value":  {&rules.Numeric{}},
-		"boolean_value":  {"boolean"},
-		"required_value": {"required", "string"},
+		"integer_value":  {rules.Integer{}},
+		"string_value":   {rules.String{}},
+		"numeric_value":  {rules.Numeric{}},
+		"boolean_value":  {rules.Boolean{}},
+		"required_value": {rules.Required{}, rules.String{}},
 	}
 
 	request, errors := govalidate.Run[apiRequest](data, fieldRules)
@@ -61,10 +62,13 @@ func main() {
 	fmt.Printf("%+v\n", request)
 }
 ```
+
 ## API
+
 ```go
 func Run[T any](data map[string]any, fieldRules map[string][]any) (*T, []Error)
 ```
+
 `Run` does two things:
 
 1. Validates input values using the provided rules.
@@ -75,48 +79,126 @@ There are two kinds of errors:
 1. Rule validation errors.
 2. Conversion errors.
 
-If rule validation fails, `Run` returns:
-```go
-nil, []Error
-```
-In this case, the target struct is not created.
+| Case | Result | Errors |
+|---|---|---|
+| Rule validation fails | `nil` | validation errors |
+| Rule validation succeeds, conversion succeeds | `*T` | empty slice |
+| Rule validation succeeds, conversion has errors | `*T` | `format` errors |
 
-If rule validation succeeds, `Run` converts the input into the target struct and returns:
-```go
-*T, []Error
-```
-The returned error slice may still contain conversion errors. Conversion errors use the name `format`.
+Conversion errors use the name `format`.
 
-This means the result can be non-nil even when `errors` is not empty:
+Always check `errors` before using the returned result:
+
 ```go
 request, errors := govalidate.Run[apiRequest](data, fieldRules)
 if len(errors) != 0 {
-	// request may be nil or non-nil.
-	// Always check errors before using the result.
+    return
+}
+
+_ = request
+```
+
+## Rule Syntax
+
+Rules can be passed as rule values:
+
+```go
+fieldRules := map[string][]any{
+    "name": {rules.Required{}, rules.String{}},
+    "age":  {rules.Integer{}, rules.Min{Min: 18}},
 }
 ```
+
+This is the preferred Go-style syntax.
+
+Rules can also be passed as strings:
+
+```go
+fieldRules := map[string][]any{
+    "name": {"required", "string"},
+    "age":  {"integer", "min:18"},
+}
+```
+
+String rules are provided as a Laravel-like shorthand and can be useful when migrating from Laravel-style validation.
+
+Both forms can be mixed:
+
+```go
+fieldRules := map[string][]any{
+    "name": {"required", rules.String{}},
+}
+```
+
+### Preferred Syntax
+
+Prefer this:
+
+```go
+fieldRules := map[string][]any{
+    "email": {rules.Required{}, rules.Email{}},
+}
+```
+
+Instead of this:
+
+```go
+fieldRules := map[string][]any{
+    "email": {"required", "email"},
+}
+```
+
+The value syntax is more idiomatic in Go, works better with IDE autocomplete, avoids string typos, and matches the way custom rules are defined.
+
+### Rule Values and Rule Pointers
+
+Both value and pointer rule instances are supported:
+
+```go
+fieldRules := map[string][]any{
+    "name": {rules.Required{}, rules.String{}},
+}
+```
+
+```go
+fieldRules := map[string][]any{
+    "name": {&rules.Required{}, &rules.String{}},
+}
+```
+
+Prefer rule values unless you have a specific reason to use pointers.
+
+Rule values are copied internally into fresh rule instances. This makes them safer to use and avoids accidental shared state.
+
+Avoid reusing the same rule pointer across concurrent validations unless your custom rule is safe for concurrent use.
 
 ## Important Notes
 
 ### `T` must be a non-pointer type
 
 Use:
+
 ```go
 request, errors := govalidate.Run[apiRequest](data, rules)
 ```
+
 Do not use:
+
 ```go
 request, errors := govalidate.Run[*apiRequest](data, rules)
 ```
+
 Pointer type parameters are rejected.
 
 ### Input is expected to be `map[string]any`
 
 The library is designed for input like this:
+
 ```go
 var data map[string]any
 err := json.Unmarshal(jsonBytes, &data)
 ```
+
 This means JSON numbers are usually represented as `float64`.
 
 ### Validation and conversion are separate steps
@@ -131,26 +213,29 @@ If a nested value cannot be converted, the result field keeps its zero value and
 
 Most validation rules are optional by default.
 
-This means that if a field is missing or has a `nil` value, rules such as `email`, `domain`, `integer`, `string`, `numeric`, and others do not fail.
+This means that if a field is missing or has a `nil` value, rules such as `email`, `domain`, `integer`, `string`, `numeric`, `array`, `json`, and others do not fail.
 
 Use `required` when the field must be present.
+
 ```go
 fieldRules := map[string][]any{
-	"email": {"required", "email"},
+	"email": {rules.Required{}, rules.Email{}},
 }
 ```
+
 Examples:
 
 | Input | Rules | Result |
 |---|---|---|
-| missing field | `email` | valid |
-| missing field | `required`, `email` | invalid |
-| `null` | `email` | valid |
-| `null` | `required`, `email` | invalid |
-| `""` | `email` | invalid |
-| `"user@example.com"` | `email` | valid |
+| missing field | `rules.Email{}` | valid |
+| missing field | `rules.Required{}, rules.Email{}` | invalid |
+| `null` | `rules.Email{}` | valid |
+| `null` | `rules.Required{}, rules.Email{}` | invalid |
+| `""` | `rules.Email{}` | invalid |
+| `"user@example.com"` | `rules.Email{}` | valid |
 
 ## Error Format
+
 ```go
 type Error struct {
 	Attribute string         `json:"attribute,omitempty"`
@@ -158,32 +243,23 @@ type Error struct {
 	Values    map[string]any `json:"values,omitempty"`
 }
 ```
+
 Example:
+
 ```json
 {
   "attribute": "email",
   "name": "email"
 }
 ```
+
 For nested values, the attribute name uses dot notation:
+
 ```text
 items.0.name
 ```
-## Built-in Rules
 
-Rules can be passed as strings:
-```go
-fieldRules := map[string][]any{
-	"name": {"required", "string"},
-}
-```
-Or as rule instances:
-```go
-fieldRules := map[string][]any{
-	"name": {&rules.Required{}, &rules.String{}},
-}
-```
-Both forms can be mixed.
+## Built-in Rules
 
 ### `required`
 
@@ -202,56 +278,171 @@ Valid zero values:
 - `0`;
 - `false`.
 
-String form:
+Preferred syntax:
+
+```go
+rules.Required{}
+```
+
+String syntax:
+
 ```go
 "required"
 ```
+
 ### `string`
 
 The value must be a string.
 
 Missing or `nil` values are valid unless `required` is also used.
 
-String form:
+Preferred syntax:
+
+```go
+rules.String{}
+```
+
+String syntax:
+
 ```go
 "string"
 ```
+
 ### `integer`
 
 The value must be an integer.
 
 For JSON input, numbers are usually `float64`, so `1` is valid and `1.5` is invalid.
 
-String form:
+Preferred syntax:
+
+```go
+rules.Integer{}
+```
+
+String syntax:
+
 ```go
 "integer"
 ```
+
 ### `numeric`
 
 The value must be a number.
 
 For JSON input, numeric values are represented as `float64`.
 
-String form:
+Preferred syntax:
+
+```go
+rules.Numeric{}
+```
+
+String syntax:
+
 ```go
 "numeric"
 ```
+
 ### `boolean`
 
 The value must be a boolean.
 
-String form:
+Preferred syntax:
+
+```go
+rules.Boolean{}
+```
+
+String syntax:
+
 ```go
 "boolean"
 ```
+
+### `array`
+
+The value must be an array, slice, or map.
+
+This rule follows Laravel-like naming. In Go terms it accepts:
+
+- arrays;
+- slices;
+- maps.
+
+Missing or `nil` values are valid unless `required` is also used.
+
+Preferred syntax:
+
+```go
+rules.Array{}
+```
+
+String syntax:
+
+```go
+"array"
+```
+
+Examples:
+
+```go
+fieldRules := map[string][]any{
+	"items": {rules.Required{}, rules.Array{}},
+}
+```
+
+### `json`
+
+The value must be a string containing valid JSON.
+
+Valid examples:
+
+```text
+{"a":1}
+[1,2,3]
+"hello"
+123
+true
+null
+```
+
+Invalid examples:
+
+```text
+hello
+{bad json}
+{"a":}
+```
+
+Important: the rule validates JSON strings. It does not validate already decoded Go values such as `map[string]any` or `[]any`.
+
+Missing or `nil` values are valid unless `required` is also used.
+
+Preferred syntax:
+
+```go
+rules.JSON{}
+```
+
+String syntax:
+
+```go
+"json"
+```
+
+Example:
+
+```go
+fieldRules := map[string][]any{
+	"metadata": {rules.JSON{}},
+}
+```
+
 ### `min`
 
 Checks the minimum value.
 
-String form:
-```go
-"min:5"
-```
 Supported value types:
 
 | Type | Check | Error name |
@@ -261,18 +452,33 @@ Supported value types:
 | array/slice/map | length must be greater than or equal to min | `min.array` |
 | unsupported type | invalid | `min.error` |
 
+Preferred syntax:
+
+```go
+rules.Min{Min: 5}
+```
+
+String syntax:
+
+```go
+"min:5"
+```
+
 Example:
+
 ```go
 fieldRules := map[string][]any{
-	"name": {"required", "string", "min:3"},
-	"age":  {"integer", "min:18"},
+	"name": {rules.Required{}, rules.String{}, rules.Min{Min: 3}},
+	"age":  {rules.Integer{}, rules.Min{Min: 18}},
 }
 ```
+
 ### `domain`
 
 The value must be a valid domain/host name.
 
 Examples of valid values:
+
 ```text
 localhost
 example.com
@@ -280,13 +486,16 @@ a.com
 пример.испытание
 例子.测试
 ```
+
 Examples of invalid values:
+
 ```text
 .example.com
 example.com.
 -example.com
 Example.COM
 ```
+
 Notes:
 
 - The rule supports IDN domains.
@@ -295,83 +504,145 @@ Notes:
 - The rule does not normalize input.
 - Domain names should be passed in lowercase form.
 
-String form:
+Preferred syntax:
+
+```go
+rules.Domain{}
+```
+
+String syntax:
+
 ```go
 "domain"
 ```
+
 ### `date`
 
 The value must be a valid RFC3339/RFC3339Nano date string.
 
 Example:
+
 ```text
 2026-06-16T12:30:00Z
 ```
-String form:
+
+Preferred syntax:
+
+```go
+rules.Date{}
+```
+
+String syntax:
+
 ```go
 "date"
 ```
+
 ### `email`
 
 The value must be an email address.
 
 Examples of valid values:
+
 ```text
 user@example.com
 mail@localhost
 ```
+
 Display-name addresses are not accepted:
+
 ```text
 John Doe <john@example.com>
 ```
-String form:
+
+Preferred syntax:
+
+```go
+rules.Email{}
+```
+
+String syntax:
+
 ```go
 "email"
 ```
+
 ### `confirmed`
 
 The field must have a matching confirmation field.
 
 For a field named:
+
 ```text
 password
 ```
+
 The confirmation field must be:
+
 ```text
 password_confirmation
 ```
-String form:
+
+Preferred syntax:
+
+```go
+rules.Confirmed{}
+```
+
+String syntax:
+
 ```go
 "confirmed"
 ```
+
 ### `accepted`
 
 The value must be one of:
+
 ```text
 yes
 on
 1
 true
 ```
+
 Also accepted:
+
 ```go
 true
 float64(1)
 ```
+
 Missing or `nil` values are valid unless `required` is also used.
 
-String form:
+Preferred syntax:
+
+```go
+rules.Accepted{}
+```
+
+String syntax:
+
 ```go
 "accepted"
 ```
+
 ### `uuid`
 
 The value must be a valid UUID.
 
-String form:
+Preferred syntax:
+
+```go
+rules.UUID{}
+```
+
+String syntax:
+
 ```go
 "uuid"
 ```
+
 ## Type Conversion
 
 After validation, `Run` converts the input map into the target struct.
@@ -383,50 +654,120 @@ Supported target field types include:
 - floats;
 - booleans;
 - strings;
+- `any` / `interface{}`;
 - pointers;
 - structs;
 - slices;
 - maps with string-like keys;
-- `time.Time`.
+- `time.Time`;
+- `json.RawMessage`.
+
+### `any` / `interface{}`
+
+Fields of type `any` keep the original decoded value.
+
+Example:
+
+```go
+type Request struct {
+	Data map[string]any `json:"data"`
+}
+```
+
+For JSON input, numbers inside `any` values remain `float64`, because this is how `encoding/json` decodes numbers into `map[string]any`.
+
+Example:
+
+```json
+{
+  "data": {
+    "count": 1
+  }
+}
+```
+
+Result:
+
+```go
+request.Data["count"] == float64(1)
+```
+
+### `json.RawMessage`
+
+`json.RawMessage` fields are supported.
+
+Example:
+
+```go
+type Request struct {
+	Raw json.RawMessage `json:"raw"`
+}
+```
+
+For input:
+
+```json
+{
+  "raw": {
+    "a": 1,
+    "b": true
+  }
+}
+```
+
+The field will contain JSON bytes for the `raw` value.
+
+Important: if the original input was already decoded into `map[string]any`, the original byte-for-byte JSON formatting is not preserved. The value is converted back to JSON using `json.Marshal`.
 
 ### JSON tags
 
 The library uses `json` tags to map input fields to struct fields.
 
 Supported examples:
+
 ```go
 Name string `json:"name"`
 Name string `json:"name,omitempty"`
 Name string `json:",omitempty"`
 Secret string `json:"-"`
 ```
+
 ### Numeric conversion
 
 Numeric conversion is strict for integer types.
 
 Valid:
+
 ```json
 {"age": 18}
 ```
+
 Invalid:
+
 ```json
 {"age": 18.5}
 ```
+
 Integer overflow is rejected.
 
 For example, this is invalid for `int8`:
+
 ```json
 {"value": 128}
 ```
+
 Negative values are rejected for unsigned integer fields.
 
 ### Maps
 
 Maps are supported for string-like keys:
+
 ```go
 map[string]int
 ```
+
 Custom string key types are also supported:
+
 ```go
 type Key string
 
@@ -434,11 +775,13 @@ type Request struct {
 	Values map[Key]int `json:"values"`
 }
 ```
+
 Maps with non-string keys are not supported.
 
 ## Custom Rules
 
 You can create custom validation rules by implementing the `Rule` interface.
+
 ```go
 type Rule interface {
 	GetName() string
@@ -446,8 +789,14 @@ type Rule interface {
 	Validate(field string, value any, data map[string]any) bool
 }
 ```
+
 Example:
+
 ```go
+package main
+
+import "strings"
+
 type StartsWithA struct {
 	name string
 }
@@ -475,32 +824,70 @@ func (r *StartsWithA) Validate(_ string, value any, _ map[string]any) bool {
 	return strings.HasPrefix(v, "A")
 }
 ```
+
 Usage:
+
+```go
+fieldRules := map[string][]any{
+	"name": {StartsWithA{}},
+}
+```
+
+Pointer usage is also supported:
+
 ```go
 fieldRules := map[string][]any{
 	"name": {&StartsWithA{}},
 }
 ```
-### Rule instances and concurrency
 
-Rule instances may keep internal state, for example the error name or error values.
-
-Do not reuse the same rule instance across concurrent validations unless your rule is safe for concurrent use.
-
-Prefer creating new rule instances for each validation call.
+Prefer value usage when possible.
 
 ## Unknown Rules
 
 Unknown string rules are treated as validation errors.
 
 Example:
+
 ```go
 fieldRules := map[string][]any{
 	"email": {"emial"},
 }
 ```
+
 This will return an error instead of silently ignoring the rule.
+
+Using rule values avoids this kind of typo:
+
+```go
+fieldRules := map[string][]any{
+	"email": {rules.Email{}},
+}
+```
+
+## Laravel-like String Rules
+
+String rules are supported for convenience and for easier migration from Laravel-style validation.
+
+Example:
+
+```go
+fieldRules := map[string][]any{
+	"name":  {"required", "string", "min:3"},
+	"email": {"required", "email"},
+}
+```
+
+The preferred Go-style version is:
+
+```go
+fieldRules := map[string][]any{
+	"name":  {rules.Required{}, rules.String{}, rules.Min{Min: 3}},
+	"email": {rules.Required{}, rules.Email{}},
+}
+```
 
 ## License
 
 See [LICENSE.md](LICENSE.md).
+```
