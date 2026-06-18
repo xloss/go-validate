@@ -13,7 +13,7 @@ type Rule interface {
 }
 
 func nameToRule(rule string) Rule {
-	params := strings.Split(rule, ":")
+	params := strings.SplitN(rule, ":", 2)
 
 	switch params[0] {
 	case "required":
@@ -49,6 +49,25 @@ func nameToRule(rule string) Rule {
 		return &rules.Domain{}
 	case "date":
 		return &rules.Date{}
+	case "date_format":
+		if len(params) != 2 {
+			errRule := &rules.Error{}
+			errRule.AddParams(rule)
+
+			return errRule
+		}
+
+		r := rules.Date{}
+		err := r.AddParams(params[1])
+		if err != nil {
+			errRule := &rules.Error{}
+			errRule.AddParams(rule)
+			errRule.AddError(err)
+
+			return errRule
+		}
+
+		return &r
 	case "email":
 		return &rules.Email{}
 	case "confirmed":

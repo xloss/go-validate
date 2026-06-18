@@ -616,12 +616,16 @@ String syntax:
 
 ### `date`
 
-The value must be a valid RFC3339/RFC3339Nano date string.
+The value must be a valid date string.
 
-Example:
+By default, the rule validates dates using `time.RFC3339Nano`.
+
+Valid default examples:
 
 ```text
 2026-06-16T12:30:00Z
+2026-06-16T12:30:00.123456789Z
+2026-06-16T12:30:00+03:00
 ```
 
 Preferred syntax:
@@ -635,6 +639,49 @@ String syntax:
 ```go
 "date"
 ```
+
+#### Custom date format
+
+A custom date format can be provided through the `Format` field.
+
+The format must be a Go time layout.
+
+Preferred syntax:
+
+```go
+rules.Date{Format: "2006-01-02"}
+```
+
+String syntax:
+
+```go
+"date_format:2006-01-02"
+```
+
+Examples:
+
+```go
+fieldRules := map[string][]any{
+	"birthday": {rules.Date{Format: "2006-01-02"}},
+	"starts_at": {"date_format:2006-01-02 15:04:05"},
+}
+```
+
+Valid values for these examples:
+
+```text
+2026-06-16
+2026-06-16 12:30:00
+```
+
+Common Go date layouts:
+
+| Expected value | Go layout |
+|---|---|
+| `2026-06-16` | `2006-01-02` |
+| `16.06.2026` | `02.01.2006` |
+| `2026-06-16 12:30:00` | `2006-01-02 15:04:05` |
+| `2026-06-16T12:30:00Z` | `2006-01-02T15:04:05Z07:00` |
 
 ### `email`
 
@@ -971,8 +1018,9 @@ Example:
 
 ```go
 fieldRules := map[string][]any{
-	"name":  {"required", "string", "min:3"},
-	"email": {"required", "email"},
+    "name":  {"required", "string", "min:3"},
+    "email": {"required", "email"},
+    "date":  {"required", "date_format:2006-01-02"},
 }
 ```
 
@@ -980,8 +1028,9 @@ The preferred Go-style version is:
 
 ```go
 fieldRules := map[string][]any{
-	"name":  {rules.Required{}, rules.String{}, rules.Min{Min: 3}},
-	"email": {rules.Required{}, rules.Email{}},
+    "name":  {rules.Required{}, rules.String{}, rules.Min{Min: 3}},
+    "email": {rules.Required{}, rules.Email{}},
+    "date":  {rules.Required{}, rules.Date{Format: "2006-01-02"}},
 }
 ```
 
