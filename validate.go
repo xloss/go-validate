@@ -413,16 +413,73 @@ func validateFields(fieldRules map[string][]any, data map[string]any, errors *[]
 			}
 		}
 
-		for _, rule := range r {
-			if ok := rule.Validate(field, data[field], data); !ok {
-				*errors = append(*errors, Error{
-					Attribute: field,
-					Name:      rule.GetName(),
-					Values:    rule.GetValues(),
-				})
+		validateField(strings.Split(field, "."), data, "", r, errors)
+	}
+}
+
+func validateField(parts []string, current any, path string, rules []Rule, errors *[]Error) {
+	if len(parts) == 0 {
+		return
+	}
+
+	part := parts[0]
+
+	if part == "*" {
+		switch value := current.(type) {
+		case []any:
+			for i, item := range value {
+				nextPath := joinPath(path, strconv.Itoa(i))
+				validateField(parts[1:], item, nextPath, rules, errors)
+			}
+		case map[string]any:
+			for key, item := range value {
+				nextPath := joinPath(path, key)
+				validateField(parts[1:], item, nextPath, rules, errors)
 			}
 		}
+
+		return
 	}
+
+	currentMap, okType := current.(map[string]any)
+	if !okType {
+		applyRules(part, nil, map[string]any{}, joinPath(path, part), rules, errors)
+		return
+	}
+
+	if len(parts) == 1 {
+		value := currentMap[part]
+		applyRules(part, value, currentMap, joinPath(path, part), rules, errors)
+		return
+	}
+
+	next, okPart := currentMap[part]
+	if !okPart {
+		validateField(parts[1:], nil, joinPath(path, part), rules, errors)
+		return
+	}
+
+	validateField(parts[1:], next, joinPath(path, part), rules, errors)
+}
+
+func applyRules(field string, value any, data map[string]any, attribute string, rules []Rule, errors *[]Error) {
+	for _, rule := range rules {
+		if ok := rule.Validate(field, value, data); !ok {
+			*errors = append(*errors, Error{
+				Attribute: attribute,
+				Name:      rule.GetName(),
+				Values:    rule.GetValues(),
+			})
+		}
+	}
+}
+
+func joinPath(path string, part string) string {
+	if path == "" {
+		return part
+	}
+
+	return path + "." + part
 }
 
 func valueToRule(value any) Rule {

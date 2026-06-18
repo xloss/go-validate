@@ -172,6 +172,102 @@ Rule values are copied internally into fresh rule instances. This makes them saf
 
 Avoid reusing the same rule pointer across concurrent validations unless your custom rule is safe for concurrent use.
 
+## Nested Fields and Wildcards
+
+Rules can be applied to nested fields using dot notation.
+
+Example input:
+
+```json
+{
+  "user": {
+    "name": "John",
+    "age": 30
+  }
+}
+```
+
+Example struct:
+
+```go
+type Request struct {
+	User struct {
+		Name string `json:"name"`
+		Age  int    `json:"age"`
+	} `json:"user"`
+}
+```
+
+Example rules:
+
+```go
+fieldRules := map[string][]any{
+	"user":      {rules.Required{}},
+	"user.name": {rules.Required{}, rules.String{}},
+	"user.age":  {rules.Required{}, rules.Integer{}},
+}
+```
+
+If validation fails, the error attribute contains the full path:
+
+```text
+user.name
+```
+
+### Wildcards
+
+Use `*` to validate every item in an array.
+
+Example input:
+
+```json
+{
+  "items": [
+    {"name": "A", "qty": 1},
+    {"name": "B", "qty": 2}
+  ]
+}
+```
+
+Example struct:
+
+```go
+type Item struct {
+	Name string `json:"name"`
+	Qty  int    `json:"qty"`
+}
+
+type Request struct {
+	Items []Item `json:"items"`
+}
+```
+
+Example rules:
+
+```go
+fieldRules := map[string][]any{
+	"items":        {rules.Required{}, rules.Array{}},
+	"items.*.name": {rules.Required{}, rules.String{}},
+	"items.*.qty":  {rules.Required{}, rules.Integer{}},
+}
+```
+
+If validation fails for an item, the error attribute contains the item index:
+
+```text
+items.0.name
+items.1.qty
+```
+
+Nested wildcard rules validate existing items. If the parent field is required, validate it separately:
+
+```go
+fieldRules := map[string][]any{
+	"items":        {rules.Required{}, rules.Array{}},
+	"items.*.name": {rules.Required{}, rules.String{}},
+}
+```
+
 ## Important Notes
 
 ### `T` must be a non-pointer type
@@ -253,9 +349,11 @@ Example:
 }
 ```
 
-For nested values, the attribute name uses dot notation:
+For nested values and wildcard rules, the attribute name uses dot notation:
 
-```text
+```
+text
+user.name
 items.0.name
 ```
 

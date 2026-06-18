@@ -1704,3 +1704,134 @@ func TestRuleValueInstancesErrors(t *testing.T) {
 		}
 	}
 }
+
+func TestValidateNestedObjectRules(t *testing.T) {
+	type testUser struct {
+		Name string `json:"name"`
+		Age  int    `json:"age"`
+	}
+
+	type testRequest struct {
+		User testUser `json:"user"`
+	}
+
+	var data map[string]any
+	r1text := `{"user": {"name": "John", "age": 30}}`
+	_ = json.Unmarshal([]byte(r1text), &data)
+
+	r, errors := Run[testRequest](data, map[string][]any{
+		"user":      {rules.Required{}},
+		"user.name": {rules.Required{}, rules.String{}},
+		"user.age":  {rules.Required{}, rules.Integer{}},
+	})
+
+	if len(errors) != 0 {
+		t.Errorf("there should be no errors. %+v", errors)
+	}
+
+	if r.User.Name != "John" {
+		t.Errorf("user.name expected John, got %s", r.User.Name)
+	}
+
+	if r.User.Age != 30 {
+		t.Errorf("user.age expected 30, got %d", r.User.Age)
+	}
+
+	r2text := `{"user": {"age": "old"}}`
+	_ = json.Unmarshal([]byte(r2text), &data)
+
+	_, errors = Run[testRequest](data, map[string][]any{
+		"user":      {rules.Required{}},
+		"user.name": {rules.Required{}, rules.String{}},
+		"user.age":  {rules.Required{}, rules.Integer{}},
+	})
+
+	if len(errors) != 2 {
+		t.Errorf("there should be 2 errors. %+v", errors)
+	}
+
+	for _, err := range errors {
+		switch err.Attribute {
+		case "user.name":
+			if err.Name != "required" {
+				t.Errorf("user.name error should be required")
+			}
+		case "user.age":
+			if err.Name != "integer" {
+				t.Errorf("user.age error should be integer")
+			}
+		default:
+			t.Errorf("unexpected error attribute: %s", err.Attribute)
+		}
+	}
+}
+
+func TestValidateWildcardArrayRules(t *testing.T) {
+	type testItem struct {
+		Name string `json:"name"`
+		Qty  int    `json:"qty"`
+	}
+
+	type testRequest struct {
+		Items []testItem `json:"items"`
+	}
+
+	var data map[string]any
+	r1text := `{"items": [{"name": "A", "qty": 1}, {"name": "B", "qty": 2}]}`
+	_ = json.Unmarshal([]byte(r1text), &data)
+
+	r, errors := Run[testRequest](data, map[string][]any{
+		"items":        {rules.Required{}, rules.Array{}},
+		"items.*.name": {rules.Required{}, rules.String{}},
+		"items.*.qty":  {rules.Required{}, rules.Integer{}},
+	})
+
+	if len(errors) != 0 {
+		t.Errorf("there should be no errors. %+v", errors)
+	}
+
+	if len(r.Items) != 2 {
+		t.Errorf("items expected 2 elements, got %+v", r.Items)
+		return
+	}
+
+	if r.Items[0].Name != "A" || r.Items[0].Qty != 1 {
+		t.Errorf("items.0 does not match. %+v", r.Items[0])
+	}
+
+	if r.Items[1].Name != "B" || r.Items[1].Qty != 2 {
+		t.Errorf("items.1 does not match. %+v", r.Items[1])
+	}
+
+	r2text := `{"items": [{"name": "A", "qty": 1}, {"qty": 2}, {"name": 3, "qty": "bad"}]}`
+	_ = json.Unmarshal([]byte(r2text), &data)
+
+	_, errors = Run[testRequest](data, map[string][]any{
+		"items":        {rules.Required{}, rules.Array{}},
+		"items.*.name": {rules.Required{}, rules.String{}},
+		"items.*.qty":  {rules.Required{}, rules.Integer{}},
+	})
+
+	if len(errors) != 3 {
+		t.Errorf("there should be 3 errors. %+v", errors)
+	}
+
+	for _, err := range errors {
+		switch err.Attribute {
+		case "items.1.name":
+			if err.Name != "required" {
+				t.Errorf("items.1.name error should be required")
+			}
+		case "items.2.name":
+			if err.Name != "string" {
+				t.Errorf("items.2.name error should be string")
+			}
+		case "items.2.qty":
+			if err.Name != "integer" {
+				t.Errorf("items.2.qty error should be integer")
+			}
+		default:
+			t.Errorf("unexpected error attribute: %s", err.Attribute)
+		}
+	}
+}
