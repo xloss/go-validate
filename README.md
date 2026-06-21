@@ -104,8 +104,8 @@ Rules can be passed as rule values:
 
 ```go
 fieldRules := map[string][]any{
-    "name": {rules.Required{}, rules.String{}},
-    "age":  {rules.Integer{}, rules.Min{Min: 18}},
+    "name": {rules.Required{}, rules.String{}, rules.Max{Max: 255}},
+    "age":  {rules.Integer{}, rules.Min{Min: 18}, rules.Max{Max: 120}},
 }
 ```
 
@@ -115,8 +115,8 @@ Rules can also be passed as strings:
 
 ```go
 fieldRules := map[string][]any{
-    "name": {"required", "string"},
-    "age":  {"integer", "min:18"},
+    "name": {"required", "string", "max:255"},
+    "age":  {"integer", "min:18", "max:120"},
 }
 ```
 
@@ -568,6 +568,40 @@ Example:
 fieldRules := map[string][]any{
 	"name": {rules.Required{}, rules.String{}, rules.Min{Min: 3}},
 	"age":  {rules.Integer{}, rules.Min{Min: 18}},
+}
+```
+
+### `max`
+
+Checks the maximum value.
+
+Supported value types:
+
+| Type | Check | Error name |
+|---|---|---|
+| number | value must be less than or equal to max | `max.numeric` |
+| string | string length must be less than or equal to max | `max.string` |
+| array/slice/map | length must be less than or equal to max | `max.array` |
+| unsupported type | invalid | `max.error` |
+
+Preferred syntax:
+
+```go
+rules.Max{Max: 255}
+```
+
+String syntax:
+
+```go
+"max:255"
+```
+Example:
+
+```go
+fieldRules := map[string][]any{
+	"name":  {rules.Required{}, rules.String{}, rules.Max{Max: 255}},
+	"age":   {rules.Integer{}, rules.Max{Max: 120}},
+	"items": {rules.Array{}, rules.Max{Max: 10}},
 }
 ```
 

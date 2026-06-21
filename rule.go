@@ -45,6 +45,25 @@ func nameToRule(rule string) Rule {
 		}
 
 		return &r
+	case "max":
+		if len(params) != 2 {
+			errRule := &rules.Error{}
+			errRule.AddParams(rule)
+
+			return errRule
+		}
+
+		r := rules.Max{}
+		err := r.AddParams(params[1])
+		if err != nil {
+			errRule := &rules.Error{}
+			errRule.AddParams(rule)
+			errRule.AddError(err)
+
+			return errRule
+		}
+
+		return &r
 	case "domain":
 		return &rules.Domain{}
 	case "date":
