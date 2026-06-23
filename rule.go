@@ -12,6 +12,10 @@ type Rule interface {
 	Validate(field string, value any, data map[string]any) bool
 }
 
+type Rewriter interface {
+	Rewrite(value any) (func(typ string) any, bool)
+}
+
 func nameToRule(rule string) Rule {
 	params := strings.SplitN(rule, ":", 2)
 

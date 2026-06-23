@@ -33,13 +33,12 @@ func (r *Date) AddParams(params string) error {
 func (r *Date) Validate(_ string, value any, _ map[string]any) bool {
 	r.name = "date"
 
-	format := r.Format
-	if format == "" {
-		format = time.RFC3339Nano
+	if r.Format == "" {
+		r.Format = time.RFC3339Nano
 	}
 
 	r.values = map[string]any{
-		"format": format,
+		"format": r.Format,
 	}
 
 	if value == nil {
@@ -51,10 +50,32 @@ func (r *Date) Validate(_ string, value any, _ map[string]any) bool {
 		return false
 	}
 
-	_, err := time.Parse(format, d)
+	_, err := time.Parse(r.Format, d)
 	if err != nil {
 		return false
 	}
 
 	return true
+}
+
+func (r *Date) Rewrite(value any) (func(typ string) any, bool) {
+	return func(typ string) any {
+		switch v := value.(type) {
+		case func(typ string) any:
+			value = v(typ)
+		}
+
+		v, ok := value.(string)
+		if !ok {
+			return value
+		}
+
+		if typ == "time.Time" {
+			t, _ := time.Parse(r.Format, v)
+
+			return t
+		}
+
+		return value
+	}, true
 }

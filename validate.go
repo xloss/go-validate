@@ -40,9 +40,16 @@ func Run[T any](data map[string]any, fieldRules map[string][]any) (*T, []Error) 
 	return &request, errors
 }
 
+type rewriteValue func(typ string) any
+
 func setValue(typ reflect.Type, data any, value reflect.Value, field string, errors *[]Error) bool {
 	if data == nil {
 		return true
+	}
+
+	switch d := data.(type) {
+	case rewriteValue:
+		data = d(typ.String())
 	}
 
 	switch typ.Kind() {
@@ -89,8 +96,28 @@ func setValue(typ reflect.Type, data any, value reflect.Value, field string, err
 		}
 	case reflect.Struct:
 		if typ.String() == "time.Time" {
-			v, ok := data.(string)
-			if !ok {
+			switch v := data.(type) {
+			case string:
+				t, err := time.Parse(time.RFC3339Nano, v)
+				if err != nil {
+					*errors = append(*errors, Error{
+						Attribute: field,
+						Name:      "format",
+						Values: map[string]any{
+							"name":    typ.String(),
+							"reflect": typ.Kind().String(),
+						},
+					})
+
+					return false
+				}
+
+				value.Set(reflect.ValueOf(t))
+
+			case time.Time:
+				value.Set(reflect.ValueOf(v))
+
+			default:
 				*errors = append(*errors, Error{
 					Attribute: field,
 					Name:      "format",
@@ -102,21 +129,6 @@ func setValue(typ reflect.Type, data any, value reflect.Value, field string, err
 
 				return false
 			}
-
-			t, err := time.Parse(time.RFC3339Nano, v)
-			if err != nil {
-				*errors = append(*errors, Error{
-					Attribute: field,
-					Name:      "format",
-					Values: map[string]any{
-						"name":    typ.String(),
-						"reflect": typ.Kind().String(),
-					},
-				})
-
-				return false
-			}
-			value.Set(reflect.ValueOf(t))
 		} else {
 			if s, ok := data.(map[string]any); ok {
 				structValue(typ, value, s, field, errors)
@@ -463,6 +475,8 @@ func validateField(parts []string, current any, path string, rules []Rule, error
 }
 
 func applyRules(field string, value any, data map[string]any, attribute string, rules []Rule, errors *[]Error) {
+	var rewrite func(typ string) any = nil
+
 	for _, rule := range rules {
 		if ok := rule.Validate(field, value, data); !ok {
 			*errors = append(*errors, Error{
@@ -470,7 +484,33 @@ func applyRules(field string, value any, data map[string]any, attribute string, 
 				Name:      rule.GetName(),
 				Values:    rule.GetValues(),
 			})
+
+			continue
 		}
+
+		if value == nil {
+			continue
+		}
+
+		switch r := rule.(type) {
+		case Rewriter:
+			if rewrite == nil {
+				rw, enable := r.Rewrite(value)
+				if enable {
+					rewrite = rw
+				}
+			} else {
+				rw, enable := r.Rewrite(rewrite)
+
+				if enable {
+					rewrite = rw
+				}
+			}
+		}
+	}
+
+	if rewrite != nil {
+		data[field] = rewriteValue(rewrite)
 	}
 }
 

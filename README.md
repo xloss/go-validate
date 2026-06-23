@@ -595,6 +595,7 @@ String syntax:
 ```go
 "max:255"
 ```
+
 Example:
 
 ```go
@@ -716,6 +717,26 @@ Common Go date layouts:
 | `16.06.2026` | `02.01.2006` |
 | `2026-06-16 12:30:00` | `2006-01-02 15:04:05` |
 | `2026-06-16T12:30:00Z` | `2006-01-02T15:04:05Z07:00` |
+
+When the target struct field is `time.Time`, the same date format is used during conversion.
+
+```go
+type Request struct {
+	Date time.Time `json:"date"`
+}
+
+data := map[string]any{
+	"date": "2026-06-16",
+}
+
+fieldRules := map[string][]any{
+	"date": {rules.Date{Format: "2006-01-02"}},
+}
+
+request, errors := govalidate.Run[Request](data, fieldRules)
+```
+
+For string fields, the original string value is preserved.
 
 ### `email`
 
@@ -1022,6 +1043,109 @@ fieldRules := map[string][]any{
 
 Prefer value usage when possible.
 
+### Custom Rule Rewrites
+
+A custom rule can also implement `Rewriter` when validation and conversion need to share a prepared value.
+
+```go
+type Rewriter interface {
+	Rewrite(value any) (func(typ string) any, bool)
+}
+```
+
+`Rewrite` is optional. Most custom rules do not need it.
+
+The rewrite function is called during conversion, when the target struct field type is already known.
+
+This is useful when a rule validates one input value but the final struct may need another Go value.
+
+For example, a rule can validate a date string and return `time.Time` only when the target field type is `time.Time`. If the target field is `string`, it should return the original string.
+
+Example:
+
+```go
+package main
+
+import "time"
+
+type DateOnly struct {
+	name   string
+	values map[string]any
+}
+
+func (r *DateOnly) GetName() string {
+	return r.name
+}
+
+func (r *DateOnly) GetValues() map[string]any {
+	return r.values
+}
+
+func (r *DateOnly) Validate(_ string, value any, _ map[string]any) bool {
+	r.name = "date_only"
+	r.values = map[string]any{
+		"format": "2006-01-02",
+	}
+
+	if value == nil {
+		return true
+	}
+
+	v, ok := value.(string)
+	if !ok {
+		return false
+	}
+
+	_, err := time.Parse("2006-01-02", v)
+
+	return err == nil
+}
+
+func (r *DateOnly) Rewrite(value any) (func(typ string) any, bool) {
+	return func(typ string) any {
+		switch v := value.(type) {
+		case func(typ string) any:
+			value = v(typ)
+		}
+
+		v, ok := value.(string)
+		if !ok {
+			return value
+		}
+
+		if typ == "time.Time" {
+			t, _ := time.Parse("2006-01-02", v)
+
+			return t
+		}
+
+		return value
+	}, true
+}
+```
+
+Usage:
+
+```go
+type Request struct {
+	Date time.Time `json:"date"`
+}
+
+fieldRules := map[string][]any{
+	"date": {DateOnly{}},
+}
+```
+
+Important notes:
+
+- `Validate` still decides whether the value is valid.
+- `Rewrite` should not be used to hide invalid values.
+- If the value cannot be rewritten for the requested target type, return the original value.
+- Missing or `nil` optional values are not rewritten.
+- The `typ` argument is the target struct field type, for example `"string"` or `"time.Time"`.
+- If several rewrite rules are used on the same field, a rewrite may receive a previous rewrite function as its input value. Call it first if the rule needs to work with the already prepared value.
+- Rewrite functions should be small and deterministic. Avoid side effects.
+
 ## Unknown Rules
 
 Unknown string rules are treated as validation errors.
@@ -1071,4 +1195,3 @@ fieldRules := map[string][]any{
 ## License
 
 See [LICENSE.md](LICENSE.md).
-```
